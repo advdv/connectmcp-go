@@ -3,8 +3,8 @@
 > [!WARNING]
 > This repository is a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) meant for internal use. Do not rely on its stability: it may change or break without notice. Use the [upstream repository](https://github.com/redpanda-data/protoc-gen-go-mcp) instead.
 
-[![Test](https://github.com/redpanda-data/protoc-gen-go-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/redpanda-data/protoc-gen-go-mcp/actions/workflows/test.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/redpanda-data/protoc-gen-go-mcp)](https://goreportcard.com/report/github.com/redpanda-data/protoc-gen-go-mcp)
+[![Test](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/advdv/protoc-gen-go-mcp)](https://goreportcard.com/report/github.com/advdv/protoc-gen-go-mcp)
 [![codecov](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp)
 
 **`protoc-gen-go-mcp`** is a [Protocol Buffers](https://protobuf.dev) compiler plugin that generates [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers for your `gRPC` or `ConnectRPC` APIs.
@@ -33,7 +33,7 @@ plugins:
   - local:
       - go
       - run
-      - github.com/redpanda-data/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp@latest
+      - github.com/advdv/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp@latest
     out: ./gen/go
     opt: paths=source_relative
 ```
@@ -63,7 +63,7 @@ Generated code programs against the `runtime.MCPServer` interface. You choose th
 ```go
 import (
     "github.com/modelcontextprotocol/go-sdk/mcp"
-    "github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/gosdk"
+    "github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
 )
 
 // Create server -- raw is *mcp.Server for transport, s is runtime.MCPServer for tools.
@@ -80,7 +80,7 @@ raw.Run(ctx, &mcp.StdioTransport{})
 ```go
 import (
     "github.com/mark3labs/mcp-go/server"
-    "github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+    "github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 )
 
 // Create server -- raw is *server.MCPServer for transport, s is runtime.MCPServer for tools.

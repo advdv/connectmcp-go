@@ -3,9 +3,9 @@ package generator
 import (
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	. "github.com/onsi/gomega"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	testdatamcp "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 )
 
 // recordingServer captures registered tools so tests can assert which tools

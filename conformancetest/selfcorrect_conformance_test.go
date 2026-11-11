@@ -21,10 +21,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	"github.com/redpanda-data/ai-sdk-go/llm"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	testdatamcp "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 )
 
 // doubleEncodedStructArgs is the exact payload Claude sent in a failing live run

@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"

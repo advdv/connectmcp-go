@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "gosdk_lib",
     srcs = ["main.go"],
-    importpath = "github.com/redpanda-data/protoc-gen-go-mcp/examples/gosdk",
+    importpath = "github.com/advdv/protoc-gen-go-mcp/examples/gosdk",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/runtime/gosdk",

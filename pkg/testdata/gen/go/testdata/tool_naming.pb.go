@@ -21,7 +21,7 @@
 package testdata
 
 import (
-	_ "github.com/redpanda-data/protoc-gen-go-mcp/pkg/mcpv1"
+	_ "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -136,8 +136,8 @@ const file_testdata_tool_naming_proto_rawDesc = "" +
 	"\x11ToolNamingService\x12\\\n" +
 	"\fGetDashboard\x12\x1b.testdata.ToolNamingRequest\x1a\x1c.testdata.ToolNamingResponse\"\x11\x82\xdb\x1c\rget_dashboard\x12H\n" +
 	"\tGetWidget\x12\x1b.testdata.ToolNamingRequest\x1a\x1c.testdata.ToolNamingResponse\"\x00\x12v\n" +
-	"7GetEquityResearchReportForInstitutionalAndRetailClients\x12\x1b.testdata.ToolNamingRequest\x1a\x1c.testdata.ToolNamingResponse\"\x00B\xa8\x01\n" +
-	"\fcom.testdataB\x0fToolNamingProtoP\x01ZGgithub.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
+	"7GetEquityResearchReportForInstitutionalAndRetailClients\x12\x1b.testdata.ToolNamingRequest\x1a\x1c.testdata.ToolNamingResponse\"\x00B\xa0\x01\n" +
+	"\fcom.testdataB\x0fToolNamingProtoP\x01Z?github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
 
 var (
 	file_testdata_tool_naming_proto_rawDescOnce sync.Once

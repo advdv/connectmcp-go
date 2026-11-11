@@ -6,11 +6,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	mcpserver "github.com/mark3labs/mcp-go/server"
 	. "github.com/onsi/gomega"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/mark3labs"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )

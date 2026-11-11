@@ -7,7 +7,7 @@ go_library(
         "schema.go",
         "toolname.go",
     ],
-    importpath = "github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen",
+    importpath = "github.com/advdv/protoc-gen-go-mcp/pkg/gen",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/mcpv1",

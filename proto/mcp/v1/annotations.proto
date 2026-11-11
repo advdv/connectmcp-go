@@ -4,7 +4,7 @@ package mcp.v1;
 
 import "google/protobuf/descriptor.proto";
 
-option go_package = "github.com/redpanda-data/protoc-gen-go-mcp/pkg/mcpv1;mcpv1";
+option go_package = "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1;mcpv1";
 
 extend google.protobuf.MethodOptions {
   // tool_name overrides the derived MCP tool name for this method.

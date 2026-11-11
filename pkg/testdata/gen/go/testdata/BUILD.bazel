@@ -11,7 +11,7 @@ go_library(
         "tool_naming.pb.go",
         "tool_naming_grpc.pb.go",
     ],
-    importpath = "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata",
+    importpath = "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/mcpv1",

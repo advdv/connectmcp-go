@@ -1,7 +1,7 @@
 load("@gazelle//:def.bzl", "gazelle")
 load("@rules_go//go:def.bzl", "nogo")
 
-# gazelle:prefix github.com/redpanda-data/protoc-gen-go-mcp
+# gazelle:prefix github.com/advdv/protoc-gen-go-mcp
 # gazelle:proto disable_global
 # gazelle:exclude pkg/testdata/gen/go/google
 # gazelle:exclude pkg/testdata/gen/go/buf

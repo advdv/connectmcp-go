@@ -66,7 +66,7 @@ var File_mcp_v1_annotations_proto protoreflect.FileDescriptor
 const file_mcp_v1_annotations_proto_rawDesc = "" +
 	"\n" +
 	"\x18mcp/v1/annotations.proto\x12\x06mcp.v1\x1a google/protobuf/descriptor.proto:=\n" +
-	"\ttool_name\x12\x1e.google.protobuf.MethodOptions\x18\xb0\xcb\x03 \x01(\tR\btoolNameB<Z:github.com/redpanda-data/protoc-gen-go-mcp/pkg/mcpv1;mcpv1b\x06proto3"
+	"\ttool_name\x12\x1e.google.protobuf.MethodOptions\x18\xb0\xcb\x03 \x01(\tR\btoolNameB4Z2github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1;mcpv1b\x06proto3"
 
 var file_mcp_v1_annotations_proto_goTypes = []any{
 	(*descriptorpb.MethodOptions)(nil), // 0: google.protobuf.MethodOptions

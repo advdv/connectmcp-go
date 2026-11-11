@@ -2,4 +2,4 @@ version: v2
 plugins:
   - remote: buf.build/protocolbuffers/go:v1.36.11
     out: ../pkg
-    opt: module=github.com/redpanda-data/protoc-gen-go-mcp/pkg
+    opt: module=github.com/advdv/protoc-gen-go-mcp/pkg

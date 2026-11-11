@@ -23,7 +23,7 @@ import (
 
 	// Blank-import proto packages so their file descriptors (with correct
 	// go_package from buf managed mode) are registered in GlobalFiles.
-	_ "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	_ "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"

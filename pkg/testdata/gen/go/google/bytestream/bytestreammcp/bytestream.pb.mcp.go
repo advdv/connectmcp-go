@@ -11,7 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"encoding/json"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	grpc "google.golang.org/grpc"
 )
 

@@ -23,10 +23,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/gosdk"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 )
 
 func main() {
