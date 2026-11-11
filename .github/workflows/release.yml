@@ -34,10 +34,10 @@ jobs:
             suffix: '.exe'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Go (version from mise.toml)
-      uses: jdx/mise-action@v3
+      uses: jdx/mise-action@v5
       with:
         install_args: go
 
@@ -69,7 +69,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
