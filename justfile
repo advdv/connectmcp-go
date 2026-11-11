@@ -24,7 +24,7 @@ test-cover:
 
 # Run conformance tests against all cloud providers (requires API keys)
 conformancetest:
-    go test ./conformancetest -v -timeout=300s
+    go test -tags external_llm ./conformancetest -v -timeout=300s
 
 # Run gazelle to sync BUILD files from go.mod
 gazelle:
@@ -42,7 +42,8 @@ generate:
     rm -rf pkg/testdata/gen/go/buf/
     rm -rf pkg/testdata/gen/go/mcp/
     cd pkg/testdata && buf build -o gen/descriptors.binpb --exclude-path buf/validate
-    gofumpt -l -w pkg/testdata/ pkg/mcpv1/
+    gofumpt -l -w pkg/testdata/
+    find pkg/mcpv1 -name '*.go' | xargs gofumpt -l -w
 
 # Install binary to GOPATH/bin
 install:
