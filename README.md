@@ -234,7 +234,7 @@ The generator creates both standard MCP and OpenAI-compatible handlers automatic
 
 ### Tooling
 
-Developer tools (Go, just, bazelisk, buf, golangci-lint, gofumpt) are pinned in `mise.toml`. Install them with [mise](https://mise.jdx.dev):
+Developer tools (Go, just, bazelisk, buf, golangci-lint, gofumpt, gh) are pinned in `mise.toml`. Install them with [mise](https://mise.jdx.dev):
 
 ```bash
 mise install

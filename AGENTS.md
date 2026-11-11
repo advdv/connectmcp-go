@@ -4,7 +4,7 @@ Protoc plugin + runtime library for generating MCP (Model Context Protocol) serv
 
 ## Build & Test
 
-Tool versions (go, just, bazelisk, buf, golangci-lint, gofumpt) are pinned in `mise.toml`; run `mise install`. Keep `go` in sync with `go.mod`.
+Tool versions (go, just, bazelisk, buf, golangci-lint, gofumpt, gh) are pinned in `mise.toml`; run `mise install`. Keep `go` in sync with `go.mod`.
 
 ```bash
 just build                # bazelisk build //...
