@@ -31,3 +31,7 @@ MODULE.bazel.lock
 /examples/basic/basic
 /examples/openai-compat/openai-compat
 /examples/dynamic/dynamic
+
+# Personal mise overrides
+mise.local.toml
+coverage.html

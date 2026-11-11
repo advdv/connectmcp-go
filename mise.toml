@@ -1,0 +1,8 @@
+[tools]
+# Keep go in sync with the `go` directive in go.mod (Bazel's go_sdk reads it from there).
+go = "1.26.1"
+just = "1.59.0"
+bazelisk = "1.30.0"
+buf = "1.75.0"
+golangci-lint = "2.15.0"
+gofumpt = "0.12.0"

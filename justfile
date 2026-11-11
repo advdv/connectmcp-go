@@ -26,10 +26,6 @@ test-cover:
 conformancetest:
     go test ./conformancetest -v -timeout=300s
 
-# Run integration tests (requires API keys)
-integrationtest:
-    go test ./integrationtest ./conformancetest -v -timeout=120s
-
 # Run gazelle to sync BUILD files from go.mod
 gazelle:
     bazelisk run //:gazelle
@@ -40,12 +36,13 @@ update-build: gazelle
 # Generate proto code (outside Bazel)
 generate:
     cd proto && buf generate
-    cd pkg/testdata && buf generate buf.build/googleapis/googleapis
+    # googleapis is pinned explicitly: this input does not go through buf.lock.
+    cd pkg/testdata && buf generate buf.build/googleapis/googleapis:004180b77378443887d3b55cabc00384
     cd pkg/testdata && buf generate --include-imports --exclude-path buf/validate
     rm -rf pkg/testdata/gen/go/buf/
     rm -rf pkg/testdata/gen/go/mcp/
     cd pkg/testdata && buf build -o gen/descriptors.binpb --exclude-path buf/validate
-    go run mvdan.cc/gofumpt@latest -l -w pkg/testdata/
+    gofumpt -l -w pkg/testdata/ pkg/mcpv1/
 
 # Install binary to GOPATH/bin
 install:
@@ -57,4 +54,4 @@ lint:
 
 # Format code (excludes generated protobuf files)
 fmt:
-    find . -name '*.go' -not -path './pkg/testdata/gen/*' | xargs go run mvdan.cc/gofumpt@latest -l -w
+    find . -name '*.go' -not -path './pkg/testdata/gen/*' | xargs gofumpt -l -w
