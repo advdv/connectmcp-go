@@ -8,11 +8,9 @@ import (
 )
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"encoding/json"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	grpc "google.golang.org/grpc"
 )
 
 var (
@@ -21,14 +19,17 @@ var (
 	IAMPolicy_TestIamPermissionsTool = runtime.Tool{Name: "google_iam_v1_IAMPolicy_TestIamPermissions", Description: "Returns permissions that a caller has on the specified resource.\nIf the resource does not exist, this will return an empty set of\npermissions, not a `NOT_FOUND` error.\n\nNote: This operation is designed to be used for building permission-aware\nUIs and command-line tools, not for authorization checking. This operation\nmay \"fail open\" without warning.\n", RawInputSchema: json.RawMessage(`{"properties":{"permissions":{"items":{"type":"string"},"type":"array"},"resource":{"type":"string"}},"required":["resource","permissions"],"type":"object"}`), RawOutputSchema: json.RawMessage(`{"properties":{"permissions":{"items":{"type":"string"},"type":"array"}},"required":[],"type":"object"}`)}
 )
 
-// IAMPolicyServer is compatible with the grpc-go server interface.
+// IAMPolicyServer is the set of unary RPCs exposed as MCP tools. It is
+// satisfied by connect-go v2 handlers and clients alike (and by grpc-go
+// servers), so tool calls can be served locally or forwarded to a remote.
 type IAMPolicyServer interface {
 	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest) (*iampb.Policy, error)
 	SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest) (*iampb.Policy, error)
 	TestIamPermissions(ctx context.Context, req *iampb.TestIamPermissionsRequest) (*iampb.TestIamPermissionsResponse, error)
 }
 
-// RegisterIAMPolicyHandler registers standard MCP handlers for IAMPolicy
+// RegisterIAMPolicyHandler registers an MCP tool for every unary RPC of
+// IAMPolicy, served by srv: a service implementation or a connect-go v2 client.
 func RegisterIAMPolicyHandler(s runtime.MCPServer, srv IAMPolicyServer, opts ...runtime.Option) {
 	config := runtime.NewConfig()
 	for _, opt := range opts {
@@ -154,264 +155,6 @@ func RegisterIAMPolicyHandler(s runtime.MCPServer, srv IAMPolicyServer, opts ...
 				return nil, err
 			}
 
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// IAMPolicyClient is compatible with the grpc-go client interface.
-type IAMPolicyClient interface {
-	GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest, opts ...grpc.CallOption) (*iampb.Policy, error)
-	SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest, opts ...grpc.CallOption) (*iampb.Policy, error)
-	TestIamPermissions(ctx context.Context, req *iampb.TestIamPermissionsRequest, opts ...grpc.CallOption) (*iampb.TestIamPermissionsResponse, error)
-}
-
-// ConnectIAMPolicyClient is compatible with the connectrpc-go client interface.
-type ConnectIAMPolicyClient interface {
-	GetIamPolicy(ctx context.Context, req *connect.Request[iampb.GetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
-	SetIamPolicy(ctx context.Context, req *connect.Request[iampb.SetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
-	TestIamPermissions(ctx context.Context, req *connect.Request[iampb.TestIamPermissionsRequest]) (*connect.Response[iampb.TestIamPermissionsResponse], error)
-}
-
-// ForwardToConnectIAMPolicyClient registers a connectrpc client, to forward MCP calls to it.
-func ForwardToConnectIAMPolicyClient(s runtime.MCPServer, client ConnectIAMPolicyClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	GetIamPolicyTool := IAMPolicy_GetIamPolicyTool
-	GetIamPolicyTool = runtime.ApplyConfig(GetIamPolicyTool, config)
-
-	if config.ShouldRegister(GetIamPolicyTool.Name) {
-		s.AddTool(GetIamPolicyTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.GetIamPolicyRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetIamPolicy(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	SetIamPolicyTool := IAMPolicy_SetIamPolicyTool
-	SetIamPolicyTool = runtime.ApplyConfig(SetIamPolicyTool, config)
-
-	if config.ShouldRegister(SetIamPolicyTool.Name) {
-		s.AddTool(SetIamPolicyTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.SetIamPolicyRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.SetIamPolicy(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	TestIamPermissionsTool := IAMPolicy_TestIamPermissionsTool
-	TestIamPermissionsTool = runtime.ApplyConfig(TestIamPermissionsTool, config)
-
-	if config.ShouldRegister(TestIamPermissionsTool.Name) {
-		s.AddTool(TestIamPermissionsTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.TestIamPermissionsRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.TestIamPermissions(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// ForwardToIAMPolicyClient registers a gRPC client, to forward MCP calls to it.
-func ForwardToIAMPolicyClient(s runtime.MCPServer, client IAMPolicyClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	GetIamPolicyTool := IAMPolicy_GetIamPolicyTool
-	GetIamPolicyTool = runtime.ApplyConfig(GetIamPolicyTool, config)
-
-	if config.ShouldRegister(GetIamPolicyTool.Name) {
-		s.AddTool(GetIamPolicyTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.GetIamPolicyRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetIamPolicy(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	SetIamPolicyTool := IAMPolicy_SetIamPolicyTool
-	SetIamPolicyTool = runtime.ApplyConfig(SetIamPolicyTool, config)
-
-	if config.ShouldRegister(SetIamPolicyTool.Name) {
-		s.AddTool(SetIamPolicyTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.SetIamPolicyRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.SetIamPolicy(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	TestIamPermissionsTool := IAMPolicy_TestIamPermissionsTool
-	TestIamPermissionsTool = runtime.ApplyConfig(TestIamPermissionsTool, config)
-
-	if config.ShouldRegister(TestIamPermissionsTool.Name) {
-		s.AddTool(TestIamPermissionsTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req iampb.TestIamPermissionsRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.TestIamPermissions(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
 			return runtime.NewToolResultJSON(structured), nil
 		})
 	}

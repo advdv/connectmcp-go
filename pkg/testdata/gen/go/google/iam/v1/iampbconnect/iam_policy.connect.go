@@ -20,40 +20,55 @@ package iampbconnect
 
 import (
 	iampb "cloud.google.com/go/iam/apiv1/iampb"
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// IAMPolicyName is the fully-qualified name of the IAMPolicy service.
 	IAMPolicyName = "google.iam.v1.IAMPolicy"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// IAMPolicySetIamPolicyProcedure is the fully-qualified name of the IAMPolicy's SetIamPolicy RPC.
+	// IAMPolicySetIamPolicyProcedure is the procedure name of the IAMPolicy's SetIamPolicy RPC.
 	IAMPolicySetIamPolicyProcedure = "/google.iam.v1.IAMPolicy/SetIamPolicy"
-	// IAMPolicyGetIamPolicyProcedure is the fully-qualified name of the IAMPolicy's GetIamPolicy RPC.
+	// IAMPolicyGetIamPolicyProcedure is the procedure name of the IAMPolicy's GetIamPolicy RPC.
 	IAMPolicyGetIamPolicyProcedure = "/google.iam.v1.IAMPolicy/GetIamPolicy"
-	// IAMPolicyTestIamPermissionsProcedure is the fully-qualified name of the IAMPolicy's
-	// TestIamPermissions RPC.
+	// IAMPolicyTestIamPermissionsProcedure is the procedure name of the IAMPolicy's TestIamPermissions
+	// RPC.
 	IAMPolicyTestIamPermissionsProcedure = "/google.iam.v1.IAMPolicy/TestIamPermissions"
+)
+
+var (
+	iAMPolicySetIamPolicySpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     iampb.File_google_iam_v1_iam_policy_proto.Services().ByName("IAMPolicy").Methods().ByName("SetIamPolicy"),
+			Procedure:  IAMPolicySetIamPolicyProcedure,
+		}
+	})
+	iAMPolicyGetIamPolicySpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     iampb.File_google_iam_v1_iam_policy_proto.Services().ByName("IAMPolicy").Methods().ByName("GetIamPolicy"),
+			Procedure:  IAMPolicyGetIamPolicyProcedure,
+		}
+	})
+	iAMPolicyTestIamPermissionsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     iampb.File_google_iam_v1_iam_policy_proto.Services().ByName("IAMPolicy").Methods().ByName("TestIamPermissions"),
+			Procedure:  IAMPolicyTestIamPermissionsProcedure,
+		}
+	})
 )
 
 // IAMPolicyClient is a client for the google.iam.v1.IAMPolicy service.
@@ -62,11 +77,11 @@ type IAMPolicyClient interface {
 	// existing policy.
 	//
 	// Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
-	SetIamPolicy(context.Context, *connect.Request[iampb.SetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
+	SetIamPolicy(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error)
 	// Gets the access control policy for a resource.
 	// Returns an empty policy if the resource exists and does not have a policy
 	// set.
-	GetIamPolicy(context.Context, *connect.Request[iampb.GetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
+	GetIamPolicy(context.Context, *iampb.GetIamPolicyRequest) (*iampb.Policy, error)
 	// Returns permissions that a caller has on the specified resource.
 	// If the resource does not exist, this will return an empty set of
 	// permissions, not a `NOT_FOUND` error.
@@ -74,61 +89,13 @@ type IAMPolicyClient interface {
 	// Note: This operation is designed to be used for building permission-aware
 	// UIs and command-line tools, not for authorization checking. This operation
 	// may "fail open" without warning.
-	TestIamPermissions(context.Context, *connect.Request[iampb.TestIamPermissionsRequest]) (*connect.Response[iampb.TestIamPermissionsResponse], error)
+	TestIamPermissions(context.Context, *iampb.TestIamPermissionsRequest) (*iampb.TestIamPermissionsResponse, error)
 }
 
-// NewIAMPolicyClient constructs a client for the google.iam.v1.IAMPolicy service. By default, it
-// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewIAMPolicyClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) IAMPolicyClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	iAMPolicyMethods := iampb.File_google_iam_v1_iam_policy_proto.Services().ByName("IAMPolicy").Methods()
-	return &iAMPolicyClient{
-		setIamPolicy: connect.NewClient[iampb.SetIamPolicyRequest, iampb.Policy](
-			httpClient,
-			baseURL+IAMPolicySetIamPolicyProcedure,
-			connect.WithSchema(iAMPolicyMethods.ByName("SetIamPolicy")),
-			connect.WithClientOptions(opts...),
-		),
-		getIamPolicy: connect.NewClient[iampb.GetIamPolicyRequest, iampb.Policy](
-			httpClient,
-			baseURL+IAMPolicyGetIamPolicyProcedure,
-			connect.WithSchema(iAMPolicyMethods.ByName("GetIamPolicy")),
-			connect.WithClientOptions(opts...),
-		),
-		testIamPermissions: connect.NewClient[iampb.TestIamPermissionsRequest, iampb.TestIamPermissionsResponse](
-			httpClient,
-			baseURL+IAMPolicyTestIamPermissionsProcedure,
-			connect.WithSchema(iAMPolicyMethods.ByName("TestIamPermissions")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// iAMPolicyClient implements IAMPolicyClient.
-type iAMPolicyClient struct {
-	setIamPolicy       *connect.Client[iampb.SetIamPolicyRequest, iampb.Policy]
-	getIamPolicy       *connect.Client[iampb.GetIamPolicyRequest, iampb.Policy]
-	testIamPermissions *connect.Client[iampb.TestIamPermissionsRequest, iampb.TestIamPermissionsResponse]
-}
-
-// SetIamPolicy calls google.iam.v1.IAMPolicy.SetIamPolicy.
-func (c *iAMPolicyClient) SetIamPolicy(ctx context.Context, req *connect.Request[iampb.SetIamPolicyRequest]) (*connect.Response[iampb.Policy], error) {
-	return c.setIamPolicy.CallUnary(ctx, req)
-}
-
-// GetIamPolicy calls google.iam.v1.IAMPolicy.GetIamPolicy.
-func (c *iAMPolicyClient) GetIamPolicy(ctx context.Context, req *connect.Request[iampb.GetIamPolicyRequest]) (*connect.Response[iampb.Policy], error) {
-	return c.getIamPolicy.CallUnary(ctx, req)
-}
-
-// TestIamPermissions calls google.iam.v1.IAMPolicy.TestIamPermissions.
-func (c *iAMPolicyClient) TestIamPermissions(ctx context.Context, req *connect.Request[iampb.TestIamPermissionsRequest]) (*connect.Response[iampb.TestIamPermissionsResponse], error) {
-	return c.testIamPermissions.CallUnary(ctx, req)
+// NewIAMPolicyClient constructs a client for the google.iam.v1.IAMPolicy service. Multiple service
+// clients may share a single connect.Client.
+func NewIAMPolicyClient(client *connect.Client) IAMPolicyClient {
+	return &iAMPolicyClient{client: client}
 }
 
 // IAMPolicyHandler is an implementation of the google.iam.v1.IAMPolicy service.
@@ -137,11 +104,11 @@ type IAMPolicyHandler interface {
 	// existing policy.
 	//
 	// Can return `NOT_FOUND`, `INVALID_ARGUMENT`, and `PERMISSION_DENIED` errors.
-	SetIamPolicy(context.Context, *connect.Request[iampb.SetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
+	SetIamPolicy(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error)
 	// Gets the access control policy for a resource.
 	// Returns an empty policy if the resource exists and does not have a policy
 	// set.
-	GetIamPolicy(context.Context, *connect.Request[iampb.GetIamPolicyRequest]) (*connect.Response[iampb.Policy], error)
+	GetIamPolicy(context.Context, *iampb.GetIamPolicyRequest) (*iampb.Policy, error)
 	// Returns permissions that a caller has on the specified resource.
 	// If the resource does not exist, this will return an empty set of
 	// permissions, not a `NOT_FOUND` error.
@@ -149,59 +116,96 @@ type IAMPolicyHandler interface {
 	// Note: This operation is designed to be used for building permission-aware
 	// UIs and command-line tools, not for authorization checking. This operation
 	// may "fail open" without warning.
-	TestIamPermissions(context.Context, *connect.Request[iampb.TestIamPermissionsRequest]) (*connect.Response[iampb.TestIamPermissionsResponse], error)
+	TestIamPermissions(context.Context, *iampb.TestIamPermissionsRequest) (*iampb.TestIamPermissionsResponse, error)
 }
 
-// NewIAMPolicyHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewIAMPolicyHandler(svc IAMPolicyHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	iAMPolicyMethods := iampb.File_google_iam_v1_iam_policy_proto.Services().ByName("IAMPolicy").Methods()
-	iAMPolicySetIamPolicyHandler := connect.NewUnaryHandler(
-		IAMPolicySetIamPolicyProcedure,
-		svc.SetIamPolicy,
-		connect.WithSchema(iAMPolicyMethods.ByName("SetIamPolicy")),
-		connect.WithHandlerOptions(opts...),
+// RegisterIAMPolicyHandler registers svc as the google.iam.v1.IAMPolicy implementation on server.
+func RegisterIAMPolicyHandler(server *connect.Server, svc IAMPolicyHandler) {
+	adapter := iAMPolicyHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: iAMPolicySetIamPolicySpec(), Handler: adapter.setIamPolicy},
+		connect.Method{Spec: iAMPolicyGetIamPolicySpec(), Handler: adapter.getIamPolicy},
+		connect.Method{Spec: iAMPolicyTestIamPermissionsSpec(), Handler: adapter.testIamPermissions},
 	)
-	iAMPolicyGetIamPolicyHandler := connect.NewUnaryHandler(
-		IAMPolicyGetIamPolicyProcedure,
-		svc.GetIamPolicy,
-		connect.WithSchema(iAMPolicyMethods.ByName("GetIamPolicy")),
-		connect.WithHandlerOptions(opts...),
-	)
-	iAMPolicyTestIamPermissionsHandler := connect.NewUnaryHandler(
-		IAMPolicyTestIamPermissionsProcedure,
-		svc.TestIamPermissions,
-		connect.WithSchema(iAMPolicyMethods.ByName("TestIamPermissions")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/google.iam.v1.IAMPolicy/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case IAMPolicySetIamPolicyProcedure:
-			iAMPolicySetIamPolicyHandler.ServeHTTP(w, r)
-		case IAMPolicyGetIamPolicyProcedure:
-			iAMPolicyGetIamPolicyHandler.ServeHTTP(w, r)
-		case IAMPolicyTestIamPermissionsProcedure:
-			iAMPolicyTestIamPermissionsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedIAMPolicyHandler returns CodeUnimplemented from all methods.
 type UnimplementedIAMPolicyHandler struct{}
 
-func (UnimplementedIAMPolicyHandler) SetIamPolicy(context.Context, *connect.Request[iampb.SetIamPolicyRequest]) (*connect.Response[iampb.Policy], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.iam.v1.IAMPolicy.SetIamPolicy is not implemented"))
+func (UnimplementedIAMPolicyHandler) SetIamPolicy(context.Context, *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.iam.v1.IAMPolicy.SetIamPolicy is not implemented")
 }
 
-func (UnimplementedIAMPolicyHandler) GetIamPolicy(context.Context, *connect.Request[iampb.GetIamPolicyRequest]) (*connect.Response[iampb.Policy], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.iam.v1.IAMPolicy.GetIamPolicy is not implemented"))
+func (UnimplementedIAMPolicyHandler) GetIamPolicy(context.Context, *iampb.GetIamPolicyRequest) (*iampb.Policy, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.iam.v1.IAMPolicy.GetIamPolicy is not implemented")
 }
 
-func (UnimplementedIAMPolicyHandler) TestIamPermissions(context.Context, *connect.Request[iampb.TestIamPermissionsRequest]) (*connect.Response[iampb.TestIamPermissionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.iam.v1.IAMPolicy.TestIamPermissions is not implemented"))
+func (UnimplementedIAMPolicyHandler) TestIamPermissions(context.Context, *iampb.TestIamPermissionsRequest) (*iampb.TestIamPermissionsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.iam.v1.IAMPolicy.TestIamPermissions is not implemented")
+}
+
+type iAMPolicyClient struct {
+	client *connect.Client
+}
+
+func (c *iAMPolicyClient) SetIamPolicy(ctx context.Context, req *iampb.SetIamPolicyRequest) (*iampb.Policy, error) {
+	var res iampb.Policy
+	if err := c.client.CallUnary(ctx, iAMPolicySetIamPolicySpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *iAMPolicyClient) GetIamPolicy(ctx context.Context, req *iampb.GetIamPolicyRequest) (*iampb.Policy, error) {
+	var res iampb.Policy
+	if err := c.client.CallUnary(ctx, iAMPolicyGetIamPolicySpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *iAMPolicyClient) TestIamPermissions(ctx context.Context, req *iampb.TestIamPermissionsRequest) (*iampb.TestIamPermissionsResponse, error) {
+	var res iampb.TestIamPermissionsResponse
+	if err := c.client.CallUnary(ctx, iAMPolicyTestIamPermissionsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type iAMPolicyHandler struct{ svc IAMPolicyHandler }
+
+func (h iAMPolicyHandler) setIamPolicy(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req iampb.SetIamPolicyRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.SetIamPolicy(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h iAMPolicyHandler) getIamPolicy(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req iampb.GetIamPolicyRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetIamPolicy(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h iAMPolicyHandler) testIamPermissions(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req iampb.TestIamPermissionsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.TestIamPermissions(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -8,23 +8,24 @@ import (
 )
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"encoding/json"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	grpc "google.golang.org/grpc"
 )
 
 var (
 	ByteStream_QueryWriteStatusTool = runtime.Tool{Name: "google_bytestream_ByteStream_QueryWriteStatus", Description: "`QueryWriteStatus()` is used to find the `committed_size` for a resource\nthat is being written, which can then be used as the `write_offset` for\nthe next `Write()` call.\n\nIf the resource does not exist (i.e., the resource has been deleted, or the\nfirst `Write()` has not yet reached the service), this method returns the\nerror `NOT_FOUND`.\n\nThe client **may** call `QueryWriteStatus()` at any time to determine how\nmuch data has been processed for this resource. This is useful if the\nclient is buffering data and needs to know which data can be safely\nevicted. For any sequence of `QueryWriteStatus()` calls for a given\nresource name, the sequence of returned `committed_size` values will be\nnon-decreasing.\n", RawInputSchema: json.RawMessage(`{"properties":{"resource_name":{"type":"string"}},"required":[],"type":"object"}`), RawOutputSchema: json.RawMessage(`{"properties":{"committed_size":{"type":"string"},"complete":{"type":"boolean"}},"required":[],"type":"object"}`)}
 )
 
-// ByteStreamServer is compatible with the grpc-go server interface.
+// ByteStreamServer is the set of unary RPCs exposed as MCP tools. It is
+// satisfied by connect-go v2 handlers and clients alike (and by grpc-go
+// servers), so tool calls can be served locally or forwarded to a remote.
 type ByteStreamServer interface {
 	QueryWriteStatus(ctx context.Context, req *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error)
 }
 
-// RegisterByteStreamHandler registers standard MCP handlers for ByteStream
+// RegisterByteStreamHandler registers an MCP tool for every unary RPC of
+// ByteStream, served by srv: a service implementation or a connect-go v2 client.
 func RegisterByteStreamHandler(s runtime.MCPServer, srv ByteStreamServer, opts ...runtime.Option) {
 	config := runtime.NewConfig()
 	for _, opt := range opts {
@@ -68,108 +69,6 @@ func RegisterByteStreamHandler(s runtime.MCPServer, srv ByteStreamServer, opts .
 				return nil, err
 			}
 
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// ByteStreamClient is compatible with the grpc-go client interface.
-type ByteStreamClient interface {
-	QueryWriteStatus(ctx context.Context, req *bytestream.QueryWriteStatusRequest, opts ...grpc.CallOption) (*bytestream.QueryWriteStatusResponse, error)
-}
-
-// ConnectByteStreamClient is compatible with the connectrpc-go client interface.
-type ConnectByteStreamClient interface {
-	QueryWriteStatus(ctx context.Context, req *connect.Request[bytestream.QueryWriteStatusRequest]) (*connect.Response[bytestream.QueryWriteStatusResponse], error)
-}
-
-// ForwardToConnectByteStreamClient registers a connectrpc client, to forward MCP calls to it.
-func ForwardToConnectByteStreamClient(s runtime.MCPServer, client ConnectByteStreamClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	QueryWriteStatusTool := ByteStream_QueryWriteStatusTool
-	QueryWriteStatusTool = runtime.ApplyConfig(QueryWriteStatusTool, config)
-
-	if config.ShouldRegister(QueryWriteStatusTool.Name) {
-		s.AddTool(QueryWriteStatusTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req bytestream.QueryWriteStatusRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.QueryWriteStatus(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// ForwardToByteStreamClient registers a gRPC client, to forward MCP calls to it.
-func ForwardToByteStreamClient(s runtime.MCPServer, client ByteStreamClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	QueryWriteStatusTool := ByteStream_QueryWriteStatusTool
-	QueryWriteStatusTool = runtime.ApplyConfig(QueryWriteStatusTool, config)
-
-	if config.ShouldRegister(QueryWriteStatusTool.Name) {
-		s.AddTool(QueryWriteStatusTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req bytestream.QueryWriteStatusRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.QueryWriteStatus(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
 			return runtime.NewToolResultJSON(structured), nil
 		})
 	}

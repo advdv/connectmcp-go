@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	. "github.com/onsi/gomega"
 )
@@ -221,7 +221,8 @@ func TestExtraPropertiesContextIntegration(t *testing.T) {
 	server := &testServer{}
 
 	// Create an MCP server
-	rawServer, mcpAdapter := mark3labs.NewServer("test-server", "1.0.0")
+	rawServer := mcptest.NewServer(t)
+	mcpAdapter := rawServer
 
 	// Create a mock tool with extra properties (simulating what the generated code would do)
 	originalSchema := map[string]interface{}{

@@ -55,8 +55,6 @@ package {{ .GoPackage }}
 import (
   "context"
   "encoding/json"
-  "connectrpc.com/connect"
-  grpc "google.golang.org/grpc"
   "github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 )
 
@@ -68,7 +66,9 @@ var (
 )
 
 {{- range $serviceName, $methods := .Services }}
-// {{$serviceName}}Server is compatible with the grpc-go server interface.
+// {{$serviceName}}Server is the set of unary RPCs exposed as MCP tools. It is
+// satisfied by connect-go v2 handlers and clients alike (and by grpc-go
+// servers), so tool calls can be served locally or forwarded to a remote.
 type {{$serviceName}}Server interface {
   {{- range $methodName, $tool := $methods }}
   {{$methodName}}(ctx context.Context, req *{{$tool.RequestType}}) (*{{$tool.ResponseType}}, error)
@@ -77,7 +77,8 @@ type {{$serviceName}}Server interface {
 {{ end }}
 
 {{- range $key, $val := .Services }}
-// Register{{$key}}Handler registers standard MCP handlers for {{$key}}
+// Register{{$key}}Handler registers an MCP tool for every unary RPC of
+// {{$key}}, served by srv: a service implementation or a connect-go v2 client.
 func Register{{$key}}Handler(s runtime.MCPServer, srv {{$key}}Server, opts ...runtime.Option) {
   config := runtime.NewConfig()
   for _, opt := range opts {
@@ -129,128 +130,6 @@ func Register{{$key}}Handler(s runtime.MCPServer, srv {{$key}}Server, opts ...ru
   {{- end }}
 }
 {{- end }}
-
-{{- range $serviceName, $methods := .Services }}
-// {{$serviceName}}Client is compatible with the grpc-go client interface.
-type {{$serviceName}}Client interface {
-  {{- range $methodName, $tool := $methods }}
-  {{$methodName}}(ctx context.Context, req *{{$tool.RequestType}}, opts ...grpc.CallOption) (*{{$tool.ResponseType}}, error)
-  {{- end }}
-}
-{{ end }}
-
-
-{{- range $serviceName, $methods := .Services }}
-// Connect{{$serviceName}}Client is compatible with the connectrpc-go client interface.
-type Connect{{$serviceName}}Client interface {
-  {{- range $methodName, $tool := $methods }}
-  {{$methodName}}(ctx context.Context, req *connect.Request[{{$tool.RequestType}}]) (*connect.Response[{{$tool.ResponseType}}], error)
-  {{- end }}
-}
-{{ end }}
-
-{{- range $key, $val := .Services }}
-// ForwardToConnect{{$key}}Client registers a connectrpc client, to forward MCP calls to it.
-func ForwardToConnect{{$key}}Client(s runtime.MCPServer, client Connect{{$key}}Client, opts ...runtime.Option) {
-  config := runtime.NewConfig()
-  for _, opt := range opts {
-    opt(config)
-  }
-
-  {{- range $tool_name, $tool_val := $val }}
-  {{$tool_name}}Tool := {{$key}}_{{$tool_name}}Tool
-  {{$tool_name}}Tool = runtime.ApplyConfig({{$tool_name}}Tool, config)
-
-  if config.ShouldRegister({{$tool_name}}Tool.Name) {
-  s.AddTool({{$tool_name}}Tool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-    var req {{$tool_val.RequestType}}
-
-    message := request.Arguments
-
-    // Extract extra properties if configured
-    for _, prop := range config.ExtraProperties {
-      if propVal, ok := message[prop.Name]; ok {
-        ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-      }
-    }
-
-    if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-      return runtime.NewToolResultError(err.Error()), nil
-    }
-
-    // Failures are returned to the model as a tool error naming the bad field,
-    // so it can correct the arguments and call the tool again.
-    if err := runtime.UnmarshalArguments(message, &req); err != nil {
-      return runtime.NewToolResultError(err.Error()), nil
-    }
-
-    resp, err := client.{{$tool_name}}(ctx, connect.NewRequest(&req))
-    if err != nil {
-      return runtime.HandleError(err)
-    }
-
-    structured, err := runtime.EncodeMessage(resp.Msg)
-    if err != nil {
-      return nil, err
-    }
-    return runtime.NewToolResultJSON(structured), nil
-  })
-  }
-  {{- end }}
-}
-{{- end }}
-
-{{- range $key, $val := .Services }}
-// ForwardTo{{$key}}Client registers a gRPC client, to forward MCP calls to it.
-func ForwardTo{{$key}}Client(s runtime.MCPServer, client {{$key}}Client, opts ...runtime.Option) {
-  config := runtime.NewConfig()
-  for _, opt := range opts {
-    opt(config)
-  }
-
-  {{- range $tool_name, $tool_val := $val }}
-  {{$tool_name}}Tool := {{$key}}_{{$tool_name}}Tool
-  {{$tool_name}}Tool = runtime.ApplyConfig({{$tool_name}}Tool, config)
-
-  if config.ShouldRegister({{$tool_name}}Tool.Name) {
-  s.AddTool({{$tool_name}}Tool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-    var req {{$tool_val.RequestType}}
-
-    message := request.Arguments
-
-    // Extract extra properties if configured
-    for _, prop := range config.ExtraProperties {
-      if propVal, ok := message[prop.Name]; ok {
-        ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-      }
-    }
-
-    if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-      return runtime.NewToolResultError(err.Error()), nil
-    }
-
-    // Failures are returned to the model as a tool error naming the bad field,
-    // so it can correct the arguments and call the tool again.
-    if err := runtime.UnmarshalArguments(message, &req); err != nil {
-      return runtime.NewToolResultError(err.Error()), nil
-    }
-
-    resp, err := client.{{$tool_name}}(ctx, &req)
-    if err != nil {
-      return runtime.HandleError(err)
-    }
-
-    structured, err := runtime.EncodeMessage(resp)
-    if err != nil {
-      return nil, err
-    }
-    return runtime.NewToolResultJSON(structured), nil
-  })
-  }
-  {{- end }}
-}
-{{- end }}
-
 
 `
 

@@ -1,17 +1,14 @@
 # Basic Example
 
-This example demonstrates runtime LLM provider selection using the TestService from pkg/testdata. You can choose between standard MCP and OpenAI-compatible handlers using the `LLM_PROVIDER` environment variable.
+Serves the `TestService` from `pkg/testdata` as MCP tools over stdio, using the
+generated handlers in `pkg/testdata/gen/go/testdata/testdatamcp` (created by
+`just generate`) and the official MCP go-sdk.
 
-**Usage:**
 ```bash
-# Use standard MCP handlers (default)
 go run .
-
-# Use OpenAI-compatible handlers  
-LLM_PROVIDER=openai go run .
 ```
 
-This example uses the generated MCP handlers from `pkg/testdata/gen/go/testdata/testdatamcp` which are created by running `just generate` in the project root.
+See `../connect` for exposing a connect-go v2 server or client as MCP tools.
 
 ## Test / list tools
 

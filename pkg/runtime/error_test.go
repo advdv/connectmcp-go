@@ -3,258 +3,211 @@ package runtime
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
+	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func TestHandleError_SimpleError(t *testing.T) {
-	err := errors.New("simple error")
+// handleErrorJSON runs HandleError and parses the tool error it produces.
+func handleErrorJSON(t *testing.T, err error) map[string]any {
+	t.Helper()
+	g := NewWithT(t)
+
 	result, handleErr := HandleError(err)
+	g.Expect(handleErr).ToNot(HaveOccurred())
+	g.Expect(result).ToNot(BeNil())
+	g.Expect(result.IsError).To(BeTrue())
 
-	if handleErr != nil {
-		t.Fatalf("HandleError should not return an error, got: %v", handleErr)
-	}
-
-	if result == nil {
-		t.Fatal("HandleError should return a result")
-	}
-
-	// Parse the JSON error response
-	var errorResp map[string]interface{}
-	if jsonErr := json.Unmarshal([]byte(result.Text), &errorResp); jsonErr != nil {
-		t.Fatalf("Failed to parse error JSON: %v", jsonErr)
-	}
-
-	if errorResp["code"] != "UNKNOWN" {
-		t.Errorf("Expected code 'UNKNOWN', got: %s", errorResp["code"])
-	}
-
-	if errorResp["message"] != "simple error" {
-		t.Errorf("Expected message 'simple error', got: %s", errorResp["message"])
-	}
+	var parsed map[string]any
+	g.Expect(json.Unmarshal([]byte(result.Text), &parsed)).To(Succeed(), result.Text)
+	return parsed
 }
 
-func TestHandleError_GRPCStatus(t *testing.T) {
-	// Create a gRPC status error with details
-	st := status.New(codes.InvalidArgument, "invalid request")
-
-	// Add a detail message
-	stringValue := wrapperspb.String("additional info")
-
-	st, err := st.WithDetails(stringValue)
-	if err != nil {
-		t.Fatalf("Failed to add details: %v", err)
-	}
-
-	result, handleErr := HandleError(st.Err())
-
-	if handleErr != nil {
-		t.Fatalf("HandleError should not return an error, got: %v", handleErr)
-	}
-
-	if result == nil {
-		t.Fatal("HandleError should return a result")
-	}
-
-	// Parse the JSON error response
-	var errorResp map[string]interface{}
-	if jsonErr := json.Unmarshal([]byte(result.Text), &errorResp); jsonErr != nil {
-		t.Fatalf("Failed to parse error JSON: %v", jsonErr)
-	}
-
-	if errorResp["code"] != "INVALID_ARGUMENT" {
-		t.Errorf("Expected code 'INVALID_ARGUMENT', got: %s", errorResp["code"])
-	}
-
-	if errorResp["message"] != "invalid request" {
-		t.Errorf("Expected message 'invalid request', got: %s", errorResp["message"])
-	}
-
-	details, hasDetails := errorResp["details"].([]interface{})
-	if !hasDetails || len(details) == 0 {
-		t.Error("Expected error details, got none")
-	}
-
-	// Verify the actual content of error details
-	if len(details) > 0 {
-		detail := details[0].(map[string]interface{})
-
-		// Check @type field
-		if typeField, ok := detail["@type"]; ok {
-			if typeStr, ok := typeField.(string); ok {
-				if typeStr != "type.googleapis.com/google.protobuf.StringValue" {
-					t.Errorf("Expected @type 'type.googleapis.com/google.protobuf.StringValue', got: %s", typeStr)
-				}
-			}
-		} else {
-			t.Error("Expected @type field in error details")
+// withDetails attaches msgs to a connect error as error details.
+func withDetails(t *testing.T, cerr *connect.Error, msgs ...proto.Message) *connect.Error {
+	t.Helper()
+	for _, msg := range msgs {
+		detail, err := connectproto.NewErrorDetail(msg)
+		if err != nil {
+			t.Fatalf("NewErrorDetail: %v", err)
 		}
-
-		// Check value field
-		if valueField, ok := detail["value"]; ok {
-			if valueStr, ok := valueField.(string); ok {
-				if valueStr != "additional info" {
-					t.Errorf("Expected value 'additional info', got: %s", valueStr)
-				}
-			}
-		} else {
-			t.Error("Expected value field in error details")
-		}
+		cerr = cerr.WithDetail(detail)
 	}
-}
-
-func TestHandleError_ConnectError(t *testing.T) {
-	// Create a Connect error
-	connectErr := connect.NewError(connect.CodeInvalidArgument, errors.New("connect error"))
-
-	result, handleErr := HandleError(connectErr)
-
-	if handleErr != nil {
-		t.Fatalf("HandleError should not return an error, got: %v", handleErr)
-	}
-
-	if result == nil {
-		t.Fatal("HandleError should return a result")
-	}
-
-	// Parse the JSON error response
-	var errorResp map[string]interface{}
-	if jsonErr := json.Unmarshal([]byte(result.Text), &errorResp); jsonErr != nil {
-		t.Fatalf("Failed to parse error JSON: %v", jsonErr)
-	}
-
-	if errorResp["code"] != "INVALID_ARGUMENT" {
-		t.Errorf("Expected code 'INVALID_ARGUMENT', got: %s", errorResp["code"])
-	}
-
-	if errorResp["message"] != "connect error" {
-		t.Errorf("Expected message 'connect error', got: %s", errorResp["message"])
-	}
-}
-
-func TestHandleError_GRPCStatusWithBadRequest(t *testing.T) {
-	// Create a gRPC status error with BadRequest details
-	st := status.New(codes.InvalidArgument, "validation failed")
-
-	// Add BadRequest details with field violations
-	badRequest := &errdetails.BadRequest{
-		FieldViolations: []*errdetails.BadRequest_FieldViolation{
-			{
-				Field:       "email",
-				Description: "email is required",
-			},
-			{
-				Field:       "password",
-				Description: "password must be at least 8 characters",
-			},
-		},
-	}
-
-	st, err := st.WithDetails(badRequest)
-	if err != nil {
-		t.Fatalf("Failed to add details: %v", err)
-	}
-
-	result, handleErr := HandleError(st.Err())
-
-	if handleErr != nil {
-		t.Fatalf("HandleError should not return an error, got: %v", handleErr)
-	}
-
-	if result == nil {
-		t.Fatal("HandleError should return a result")
-	}
-
-	// Parse the JSON error response
-	var errorResp map[string]interface{}
-	if jsonErr := json.Unmarshal([]byte(result.Text), &errorResp); jsonErr != nil {
-		t.Fatalf("Failed to parse error JSON: %v", jsonErr)
-	}
-
-	if errorResp["code"] != "INVALID_ARGUMENT" {
-		t.Errorf("Expected code 'INVALID_ARGUMENT', got: %s", errorResp["code"])
-	}
-
-	if errorResp["message"] != "validation failed" {
-		t.Errorf("Expected message 'validation failed', got: %s", errorResp["message"])
-	}
-
-	details, hasDetails := errorResp["details"].([]interface{})
-	if !hasDetails || len(details) == 0 {
-		t.Error("Expected error details, got none")
-	}
-
-	// Verify the BadRequest error details content
-	if len(details) > 0 {
-		detail := details[0].(map[string]interface{})
-
-		// Check @type field
-		if typeField, ok := detail["@type"]; ok {
-			if typeStr, ok := typeField.(string); ok {
-				if typeStr != "type.googleapis.com/google.rpc.BadRequest" {
-					t.Errorf("Expected @type 'type.googleapis.com/google.rpc.BadRequest', got: %s", typeStr)
-				}
-			}
-		} else {
-			t.Error("Expected @type field in error details")
-		}
-
-		// Check fieldViolations field (protojson uses camelCase by default)
-		if fieldViolationsField, ok := detail["fieldViolations"]; ok {
-			if violations, ok := fieldViolationsField.([]interface{}); ok {
-				if len(violations) != 2 {
-					t.Errorf("Expected 2 field violations, got: %d", len(violations))
-				}
-
-				// Check first violation
-				if len(violations) > 0 {
-					violation := violations[0].(map[string]interface{})
-					if field, ok := violation["field"].(string); ok {
-						if field != "email" {
-							t.Errorf("Expected field 'email', got: %s", field)
-						}
-					}
-					if desc, ok := violation["description"].(string); ok {
-						if desc != "email is required" {
-							t.Errorf("Expected description 'email is required', got: %s", desc)
-						}
-					}
-				}
-
-				// Check second violation
-				if len(violations) > 1 {
-					violation := violations[1].(map[string]interface{})
-					if field, ok := violation["field"].(string); ok {
-						if field != "password" {
-							t.Errorf("Expected field 'password', got: %s", field)
-						}
-					}
-					if desc, ok := violation["description"].(string); ok {
-						if desc != "password must be at least 8 characters" {
-							t.Errorf("Expected description 'password must be at least 8 characters', got: %s", desc)
-						}
-					}
-				}
-			}
-		} else {
-			t.Error("Expected fieldViolations field in error details")
-		}
-	}
+	return cerr
 }
 
 func TestHandleError_NilError(t *testing.T) {
-	result, handleErr := HandleError(nil)
+	g := NewWithT(t)
 
-	if handleErr != nil {
-		t.Fatalf("HandleError should not return an error for nil input, got: %v", handleErr)
-	}
+	result, err := HandleError(nil)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(result).To(BeNil())
+}
 
-	if result != nil {
-		t.Fatal("HandleError should return nil result for nil error")
+func TestHandleError_PlainError(t *testing.T) {
+	g := NewWithT(t)
+
+	resp := handleErrorJSON(t, fmt.Errorf("context: %w", errors.New("root cause")))
+	g.Expect(resp["code"]).To(Equal("UNKNOWN"))
+	g.Expect(resp["message"]).To(Equal("context: root cause"))
+	g.Expect(resp).ToNot(HaveKey("details"))
+}
+
+func TestHandleError_ConnectErrorCodes(t *testing.T) {
+	for code, expected := range map[connect.Code]string{
+		connect.CodeCanceled:           "CANCELED",
+		connect.CodeUnknown:            "UNKNOWN",
+		connect.CodeInvalidArgument:    "INVALID_ARGUMENT",
+		connect.CodeDeadlineExceeded:   "DEADLINE_EXCEEDED",
+		connect.CodeNotFound:           "NOT_FOUND",
+		connect.CodeAlreadyExists:      "ALREADY_EXISTS",
+		connect.CodePermissionDenied:   "PERMISSION_DENIED",
+		connect.CodeResourceExhausted:  "RESOURCE_EXHAUSTED",
+		connect.CodeFailedPrecondition: "FAILED_PRECONDITION",
+		connect.CodeAborted:            "ABORTED",
+		connect.CodeOutOfRange:         "OUT_OF_RANGE",
+		connect.CodeUnimplemented:      "UNIMPLEMENTED",
+		connect.CodeInternal:           "INTERNAL",
+		connect.CodeUnavailable:        "UNAVAILABLE",
+		connect.CodeDataLoss:           "DATA_LOSS",
+		connect.CodeUnauthenticated:    "UNAUTHENTICATED",
+	} {
+		t.Run(expected, func(t *testing.T) {
+			g := NewWithT(t)
+
+			resp := handleErrorJSON(t, connect.NewError(code, "test error for "+expected))
+			g.Expect(resp["code"]).To(Equal(expected))
+			// The bare message, without connect's "code: " prefix.
+			g.Expect(resp["message"]).To(Equal("test error for " + expected))
+		})
 	}
+}
+
+func TestHandleError_Messages(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		g := NewWithT(t)
+
+		resp := handleErrorJSON(t, connect.NewError(connect.CodeInternal, ""))
+		g.Expect(resp["code"]).To(Equal("INTERNAL"))
+		g.Expect(resp).ToNot(HaveKey("message"))
+	})
+
+	t.Run("long", func(t *testing.T) {
+		g := NewWithT(t)
+
+		long := strings.Repeat("x", 10000)
+		resp := handleErrorJSON(t, connect.NewError(connect.CodeInternal, long))
+		g.Expect(resp["message"]).To(Equal(long))
+	})
+
+	t.Run("special characters", func(t *testing.T) {
+		g := NewWithT(t)
+
+		special := `Error with "quotes" and \backslashes\ and <html> and 日本語`
+		resp := handleErrorJSON(t, connect.NewError(connect.CodeInternal, special))
+		g.Expect(resp["message"]).To(Equal(special))
+	})
+}
+
+func TestHandleError_Details(t *testing.T) {
+	t.Run("scalar wrapper", func(t *testing.T) {
+		g := NewWithT(t)
+
+		resp := handleErrorJSON(t, withDetails(t,
+			connect.NewError(connect.CodeInvalidArgument, "invalid request"),
+			wrapperspb.String("additional info"),
+		))
+		g.Expect(resp["code"]).To(Equal("INVALID_ARGUMENT"))
+		g.Expect(resp["message"]).To(Equal("invalid request"))
+		g.Expect(resp["details"]).To(Equal([]any{map[string]any{
+			"@type": "type.googleapis.com/google.protobuf.StringValue",
+			"value": "additional info",
+		}}))
+	})
+
+	t.Run("multiple, in order", func(t *testing.T) {
+		g := NewWithT(t)
+
+		resp := handleErrorJSON(t, withDetails(t,
+			connect.NewError(connect.CodeInvalidArgument, "validation failed"),
+			&errdetails.BadRequest{FieldViolations: []*errdetails.BadRequest_FieldViolation{
+				{Field: "email", Description: "email is required"},
+				{Field: "password", Description: "password must be at least 8 characters"},
+			}},
+			&errdetails.ErrorInfo{Reason: "QUOTA", Domain: "example.com", Metadata: map[string]string{"limit": "10"}},
+		))
+		g.Expect(resp["details"]).To(Equal([]any{
+			map[string]any{
+				"@type": "type.googleapis.com/google.rpc.BadRequest",
+				"fieldViolations": []any{
+					map[string]any{"field": "email", "description": "email is required"},
+					map[string]any{"field": "password", "description": "password must be at least 8 characters"},
+				},
+			},
+			map[string]any{
+				"@type":    "type.googleapis.com/google.rpc.ErrorInfo",
+				"reason":   "QUOTA",
+				"domain":   "example.com",
+				"metadata": map[string]any{"limit": "10"},
+			},
+		}))
+	})
+
+	t.Run("unknown message type is passed through raw", func(t *testing.T) {
+		g := NewWithT(t)
+
+		cerr := connect.NewError(connect.CodeInternal, "boom").WithDetail(&connect.ErrorDetail{
+			Type:  "acme.v1.NotLinkedIn",
+			Value: []byte("raw"),
+		})
+		resp := handleErrorJSON(t, cerr)
+		g.Expect(resp["details"]).To(Equal([]any{map[string]any{
+			"@type": "type.googleapis.com/acme.v1.NotLinkedIn",
+			"value": "cmF3", // base64("raw")
+		}}))
+	})
+}
+
+// A connect error found deeper in the chain still supplies the code and
+// details, while the context added by wrapping stays visible to the model.
+func TestHandleError_WrappedConnectError(t *testing.T) {
+	inner := withDetails(t,
+		connect.NewError(connect.CodeNotFound, "entity not found"),
+		&errdetails.ResourceInfo{ResourceType: "user", ResourceName: "users/123"},
+	)
+
+	t.Run("fmt.Errorf", func(t *testing.T) {
+		g := NewWithT(t)
+
+		resp := handleErrorJSON(t, fmt.Errorf("middleware: %w", fmt.Errorf("handler: %w", inner)))
+		g.Expect(resp["code"]).To(Equal("NOT_FOUND"))
+		g.Expect(resp["message"]).To(Equal("middleware: handler: not_found: entity not found"))
+		g.Expect(resp["details"]).To(HaveLen(1))
+	})
+
+	t.Run("errors.Join", func(t *testing.T) {
+		g := NewWithT(t)
+
+		resp := handleErrorJSON(t, errors.Join(inner, errors.New("additional context")))
+		g.Expect(resp["code"]).To(Equal("NOT_FOUND"))
+		g.Expect(resp["message"]).To(ContainSubstring("entity not found"))
+		g.Expect(resp["message"]).To(ContainSubstring("additional context"))
+	})
+
+	t.Run("cause is not leaked", func(t *testing.T) {
+		g := NewWithT(t)
+
+		// WithCause is connect v2's way to keep an error server-side only.
+		cerr := connect.NewError(connect.CodeInternal, "something went wrong").
+			WithCause(errors.New("db password is hunter2"))
+		resp := handleErrorJSON(t, cerr)
+		g.Expect(resp["message"]).To(Equal("something went wrong"))
+	})
 }

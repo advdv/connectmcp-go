@@ -20,64 +20,89 @@ package longrunningpbconnect
 
 import (
 	longrunningpb "cloud.google.com/go/longrunning/autogen/longrunningpb"
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// OperationsName is the fully-qualified name of the Operations service.
 	OperationsName = "google.longrunning.Operations"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// OperationsListOperationsProcedure is the fully-qualified name of the Operations's ListOperations
-	// RPC.
+	// OperationsListOperationsProcedure is the procedure name of the Operations's ListOperations RPC.
 	OperationsListOperationsProcedure = "/google.longrunning.Operations/ListOperations"
-	// OperationsGetOperationProcedure is the fully-qualified name of the Operations's GetOperation RPC.
+	// OperationsGetOperationProcedure is the procedure name of the Operations's GetOperation RPC.
 	OperationsGetOperationProcedure = "/google.longrunning.Operations/GetOperation"
-	// OperationsDeleteOperationProcedure is the fully-qualified name of the Operations's
-	// DeleteOperation RPC.
+	// OperationsDeleteOperationProcedure is the procedure name of the Operations's DeleteOperation RPC.
 	OperationsDeleteOperationProcedure = "/google.longrunning.Operations/DeleteOperation"
-	// OperationsCancelOperationProcedure is the fully-qualified name of the Operations's
-	// CancelOperation RPC.
+	// OperationsCancelOperationProcedure is the procedure name of the Operations's CancelOperation RPC.
 	OperationsCancelOperationProcedure = "/google.longrunning.Operations/CancelOperation"
-	// OperationsWaitOperationProcedure is the fully-qualified name of the Operations's WaitOperation
-	// RPC.
+	// OperationsWaitOperationProcedure is the procedure name of the Operations's WaitOperation RPC.
 	OperationsWaitOperationProcedure = "/google.longrunning.Operations/WaitOperation"
+)
+
+var (
+	operationsListOperationsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods().ByName("ListOperations"),
+			Procedure:  OperationsListOperationsProcedure,
+		}
+	})
+	operationsGetOperationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods().ByName("GetOperation"),
+			Procedure:  OperationsGetOperationProcedure,
+		}
+	})
+	operationsDeleteOperationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods().ByName("DeleteOperation"),
+			Procedure:  OperationsDeleteOperationProcedure,
+		}
+	})
+	operationsCancelOperationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods().ByName("CancelOperation"),
+			Procedure:  OperationsCancelOperationProcedure,
+		}
+	})
+	operationsWaitOperationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods().ByName("WaitOperation"),
+			Procedure:  OperationsWaitOperationProcedure,
+		}
+	})
 )
 
 // OperationsClient is a client for the google.longrunning.Operations service.
 type OperationsClient interface {
 	// Lists operations that match the specified filter in the request. If the
 	// server doesn't support this method, it returns `UNIMPLEMENTED`.
-	ListOperations(context.Context, *connect.Request[longrunningpb.ListOperationsRequest]) (*connect.Response[longrunningpb.ListOperationsResponse], error)
+	ListOperations(context.Context, *longrunningpb.ListOperationsRequest) (*longrunningpb.ListOperationsResponse, error)
 	// Gets the latest state of a long-running operation.  Clients can use this
 	// method to poll the operation result at intervals as recommended by the API
 	// service.
-	GetOperation(context.Context, *connect.Request[longrunningpb.GetOperationRequest]) (*connect.Response[longrunningpb.Operation], error)
+	GetOperation(context.Context, *longrunningpb.GetOperationRequest) (*longrunningpb.Operation, error)
 	// Deletes a long-running operation. This method indicates that the client is
 	// no longer interested in the operation result. It does not cancel the
 	// operation. If the server doesn't support this method, it returns
 	// `google.rpc.Code.UNIMPLEMENTED`.
-	DeleteOperation(context.Context, *connect.Request[longrunningpb.DeleteOperationRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteOperation(context.Context, *longrunningpb.DeleteOperationRequest) (*emptypb.Empty, error)
 	// Starts asynchronous cancellation on a long-running operation.  The server
 	// makes a best effort to cancel the operation, but success is not
 	// guaranteed.  If the server doesn't support this method, it returns
@@ -89,7 +114,7 @@ type OperationsClient interface {
 	// an [Operation.error][google.longrunning.Operation.error] value with a
 	// [google.rpc.Status.code][google.rpc.Status.code] of `1`, corresponding to
 	// `Code.CANCELLED`.
-	CancelOperation(context.Context, *connect.Request[longrunningpb.CancelOperationRequest]) (*connect.Response[emptypb.Empty], error)
+	CancelOperation(context.Context, *longrunningpb.CancelOperationRequest) (*emptypb.Empty, error)
 	// Waits until the specified long-running operation is done or reaches at most
 	// a specified timeout, returning the latest state.  If the operation is
 	// already done, the latest state is immediately returned.  If the timeout
@@ -99,101 +124,29 @@ type OperationsClient interface {
 	// Note that this method is on a best-effort basis.  It may return the latest
 	// state before the specified timeout (including immediately), meaning even an
 	// immediate response is no guarantee that the operation is done.
-	WaitOperation(context.Context, *connect.Request[longrunningpb.WaitOperationRequest]) (*connect.Response[longrunningpb.Operation], error)
+	WaitOperation(context.Context, *longrunningpb.WaitOperationRequest) (*longrunningpb.Operation, error)
 }
 
-// NewOperationsClient constructs a client for the google.longrunning.Operations service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewOperationsClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) OperationsClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	operationsMethods := longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods()
-	return &operationsClient{
-		listOperations: connect.NewClient[longrunningpb.ListOperationsRequest, longrunningpb.ListOperationsResponse](
-			httpClient,
-			baseURL+OperationsListOperationsProcedure,
-			connect.WithSchema(operationsMethods.ByName("ListOperations")),
-			connect.WithClientOptions(opts...),
-		),
-		getOperation: connect.NewClient[longrunningpb.GetOperationRequest, longrunningpb.Operation](
-			httpClient,
-			baseURL+OperationsGetOperationProcedure,
-			connect.WithSchema(operationsMethods.ByName("GetOperation")),
-			connect.WithClientOptions(opts...),
-		),
-		deleteOperation: connect.NewClient[longrunningpb.DeleteOperationRequest, emptypb.Empty](
-			httpClient,
-			baseURL+OperationsDeleteOperationProcedure,
-			connect.WithSchema(operationsMethods.ByName("DeleteOperation")),
-			connect.WithClientOptions(opts...),
-		),
-		cancelOperation: connect.NewClient[longrunningpb.CancelOperationRequest, emptypb.Empty](
-			httpClient,
-			baseURL+OperationsCancelOperationProcedure,
-			connect.WithSchema(operationsMethods.ByName("CancelOperation")),
-			connect.WithClientOptions(opts...),
-		),
-		waitOperation: connect.NewClient[longrunningpb.WaitOperationRequest, longrunningpb.Operation](
-			httpClient,
-			baseURL+OperationsWaitOperationProcedure,
-			connect.WithSchema(operationsMethods.ByName("WaitOperation")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// operationsClient implements OperationsClient.
-type operationsClient struct {
-	listOperations  *connect.Client[longrunningpb.ListOperationsRequest, longrunningpb.ListOperationsResponse]
-	getOperation    *connect.Client[longrunningpb.GetOperationRequest, longrunningpb.Operation]
-	deleteOperation *connect.Client[longrunningpb.DeleteOperationRequest, emptypb.Empty]
-	cancelOperation *connect.Client[longrunningpb.CancelOperationRequest, emptypb.Empty]
-	waitOperation   *connect.Client[longrunningpb.WaitOperationRequest, longrunningpb.Operation]
-}
-
-// ListOperations calls google.longrunning.Operations.ListOperations.
-func (c *operationsClient) ListOperations(ctx context.Context, req *connect.Request[longrunningpb.ListOperationsRequest]) (*connect.Response[longrunningpb.ListOperationsResponse], error) {
-	return c.listOperations.CallUnary(ctx, req)
-}
-
-// GetOperation calls google.longrunning.Operations.GetOperation.
-func (c *operationsClient) GetOperation(ctx context.Context, req *connect.Request[longrunningpb.GetOperationRequest]) (*connect.Response[longrunningpb.Operation], error) {
-	return c.getOperation.CallUnary(ctx, req)
-}
-
-// DeleteOperation calls google.longrunning.Operations.DeleteOperation.
-func (c *operationsClient) DeleteOperation(ctx context.Context, req *connect.Request[longrunningpb.DeleteOperationRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.deleteOperation.CallUnary(ctx, req)
-}
-
-// CancelOperation calls google.longrunning.Operations.CancelOperation.
-func (c *operationsClient) CancelOperation(ctx context.Context, req *connect.Request[longrunningpb.CancelOperationRequest]) (*connect.Response[emptypb.Empty], error) {
-	return c.cancelOperation.CallUnary(ctx, req)
-}
-
-// WaitOperation calls google.longrunning.Operations.WaitOperation.
-func (c *operationsClient) WaitOperation(ctx context.Context, req *connect.Request[longrunningpb.WaitOperationRequest]) (*connect.Response[longrunningpb.Operation], error) {
-	return c.waitOperation.CallUnary(ctx, req)
+// NewOperationsClient constructs a client for the google.longrunning.Operations service. Multiple
+// service clients may share a single connect.Client.
+func NewOperationsClient(client *connect.Client) OperationsClient {
+	return &operationsClient{client: client}
 }
 
 // OperationsHandler is an implementation of the google.longrunning.Operations service.
 type OperationsHandler interface {
 	// Lists operations that match the specified filter in the request. If the
 	// server doesn't support this method, it returns `UNIMPLEMENTED`.
-	ListOperations(context.Context, *connect.Request[longrunningpb.ListOperationsRequest]) (*connect.Response[longrunningpb.ListOperationsResponse], error)
+	ListOperations(context.Context, *longrunningpb.ListOperationsRequest) (*longrunningpb.ListOperationsResponse, error)
 	// Gets the latest state of a long-running operation.  Clients can use this
 	// method to poll the operation result at intervals as recommended by the API
 	// service.
-	GetOperation(context.Context, *connect.Request[longrunningpb.GetOperationRequest]) (*connect.Response[longrunningpb.Operation], error)
+	GetOperation(context.Context, *longrunningpb.GetOperationRequest) (*longrunningpb.Operation, error)
 	// Deletes a long-running operation. This method indicates that the client is
 	// no longer interested in the operation result. It does not cancel the
 	// operation. If the server doesn't support this method, it returns
 	// `google.rpc.Code.UNIMPLEMENTED`.
-	DeleteOperation(context.Context, *connect.Request[longrunningpb.DeleteOperationRequest]) (*connect.Response[emptypb.Empty], error)
+	DeleteOperation(context.Context, *longrunningpb.DeleteOperationRequest) (*emptypb.Empty, error)
 	// Starts asynchronous cancellation on a long-running operation.  The server
 	// makes a best effort to cancel the operation, but success is not
 	// guaranteed.  If the server doesn't support this method, it returns
@@ -205,7 +158,7 @@ type OperationsHandler interface {
 	// an [Operation.error][google.longrunning.Operation.error] value with a
 	// [google.rpc.Status.code][google.rpc.Status.code] of `1`, corresponding to
 	// `Code.CANCELLED`.
-	CancelOperation(context.Context, *connect.Request[longrunningpb.CancelOperationRequest]) (*connect.Response[emptypb.Empty], error)
+	CancelOperation(context.Context, *longrunningpb.CancelOperationRequest) (*emptypb.Empty, error)
 	// Waits until the specified long-running operation is done or reaches at most
 	// a specified timeout, returning the latest state.  If the operation is
 	// already done, the latest state is immediately returned.  If the timeout
@@ -215,83 +168,147 @@ type OperationsHandler interface {
 	// Note that this method is on a best-effort basis.  It may return the latest
 	// state before the specified timeout (including immediately), meaning even an
 	// immediate response is no guarantee that the operation is done.
-	WaitOperation(context.Context, *connect.Request[longrunningpb.WaitOperationRequest]) (*connect.Response[longrunningpb.Operation], error)
+	WaitOperation(context.Context, *longrunningpb.WaitOperationRequest) (*longrunningpb.Operation, error)
 }
 
-// NewOperationsHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewOperationsHandler(svc OperationsHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	operationsMethods := longrunningpb.File_google_longrunning_operations_proto.Services().ByName("Operations").Methods()
-	operationsListOperationsHandler := connect.NewUnaryHandler(
-		OperationsListOperationsProcedure,
-		svc.ListOperations,
-		connect.WithSchema(operationsMethods.ByName("ListOperations")),
-		connect.WithHandlerOptions(opts...),
+// RegisterOperationsHandler registers svc as the google.longrunning.Operations implementation on
+// server.
+func RegisterOperationsHandler(server *connect.Server, svc OperationsHandler) {
+	adapter := operationsHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: operationsListOperationsSpec(), Handler: adapter.listOperations},
+		connect.Method{Spec: operationsGetOperationSpec(), Handler: adapter.getOperation},
+		connect.Method{Spec: operationsDeleteOperationSpec(), Handler: adapter.deleteOperation},
+		connect.Method{Spec: operationsCancelOperationSpec(), Handler: adapter.cancelOperation},
+		connect.Method{Spec: operationsWaitOperationSpec(), Handler: adapter.waitOperation},
 	)
-	operationsGetOperationHandler := connect.NewUnaryHandler(
-		OperationsGetOperationProcedure,
-		svc.GetOperation,
-		connect.WithSchema(operationsMethods.ByName("GetOperation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	operationsDeleteOperationHandler := connect.NewUnaryHandler(
-		OperationsDeleteOperationProcedure,
-		svc.DeleteOperation,
-		connect.WithSchema(operationsMethods.ByName("DeleteOperation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	operationsCancelOperationHandler := connect.NewUnaryHandler(
-		OperationsCancelOperationProcedure,
-		svc.CancelOperation,
-		connect.WithSchema(operationsMethods.ByName("CancelOperation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	operationsWaitOperationHandler := connect.NewUnaryHandler(
-		OperationsWaitOperationProcedure,
-		svc.WaitOperation,
-		connect.WithSchema(operationsMethods.ByName("WaitOperation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/google.longrunning.Operations/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case OperationsListOperationsProcedure:
-			operationsListOperationsHandler.ServeHTTP(w, r)
-		case OperationsGetOperationProcedure:
-			operationsGetOperationHandler.ServeHTTP(w, r)
-		case OperationsDeleteOperationProcedure:
-			operationsDeleteOperationHandler.ServeHTTP(w, r)
-		case OperationsCancelOperationProcedure:
-			operationsCancelOperationHandler.ServeHTTP(w, r)
-		case OperationsWaitOperationProcedure:
-			operationsWaitOperationHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedOperationsHandler returns CodeUnimplemented from all methods.
 type UnimplementedOperationsHandler struct{}
 
-func (UnimplementedOperationsHandler) ListOperations(context.Context, *connect.Request[longrunningpb.ListOperationsRequest]) (*connect.Response[longrunningpb.ListOperationsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.longrunning.Operations.ListOperations is not implemented"))
+func (UnimplementedOperationsHandler) ListOperations(context.Context, *longrunningpb.ListOperationsRequest) (*longrunningpb.ListOperationsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.longrunning.Operations.ListOperations is not implemented")
 }
 
-func (UnimplementedOperationsHandler) GetOperation(context.Context, *connect.Request[longrunningpb.GetOperationRequest]) (*connect.Response[longrunningpb.Operation], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.longrunning.Operations.GetOperation is not implemented"))
+func (UnimplementedOperationsHandler) GetOperation(context.Context, *longrunningpb.GetOperationRequest) (*longrunningpb.Operation, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.longrunning.Operations.GetOperation is not implemented")
 }
 
-func (UnimplementedOperationsHandler) DeleteOperation(context.Context, *connect.Request[longrunningpb.DeleteOperationRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.longrunning.Operations.DeleteOperation is not implemented"))
+func (UnimplementedOperationsHandler) DeleteOperation(context.Context, *longrunningpb.DeleteOperationRequest) (*emptypb.Empty, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.longrunning.Operations.DeleteOperation is not implemented")
 }
 
-func (UnimplementedOperationsHandler) CancelOperation(context.Context, *connect.Request[longrunningpb.CancelOperationRequest]) (*connect.Response[emptypb.Empty], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.longrunning.Operations.CancelOperation is not implemented"))
+func (UnimplementedOperationsHandler) CancelOperation(context.Context, *longrunningpb.CancelOperationRequest) (*emptypb.Empty, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.longrunning.Operations.CancelOperation is not implemented")
 }
 
-func (UnimplementedOperationsHandler) WaitOperation(context.Context, *connect.Request[longrunningpb.WaitOperationRequest]) (*connect.Response[longrunningpb.Operation], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.longrunning.Operations.WaitOperation is not implemented"))
+func (UnimplementedOperationsHandler) WaitOperation(context.Context, *longrunningpb.WaitOperationRequest) (*longrunningpb.Operation, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.longrunning.Operations.WaitOperation is not implemented")
+}
+
+type operationsClient struct {
+	client *connect.Client
+}
+
+func (c *operationsClient) ListOperations(ctx context.Context, req *longrunningpb.ListOperationsRequest) (*longrunningpb.ListOperationsResponse, error) {
+	var res longrunningpb.ListOperationsResponse
+	if err := c.client.CallUnary(ctx, operationsListOperationsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *operationsClient) GetOperation(ctx context.Context, req *longrunningpb.GetOperationRequest) (*longrunningpb.Operation, error) {
+	var res longrunningpb.Operation
+	if err := c.client.CallUnary(ctx, operationsGetOperationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *operationsClient) DeleteOperation(ctx context.Context, req *longrunningpb.DeleteOperationRequest) (*emptypb.Empty, error) {
+	var res emptypb.Empty
+	if err := c.client.CallUnary(ctx, operationsDeleteOperationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *operationsClient) CancelOperation(ctx context.Context, req *longrunningpb.CancelOperationRequest) (*emptypb.Empty, error) {
+	var res emptypb.Empty
+	if err := c.client.CallUnary(ctx, operationsCancelOperationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *operationsClient) WaitOperation(ctx context.Context, req *longrunningpb.WaitOperationRequest) (*longrunningpb.Operation, error) {
+	var res longrunningpb.Operation
+	if err := c.client.CallUnary(ctx, operationsWaitOperationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type operationsHandler struct{ svc OperationsHandler }
+
+func (h operationsHandler) listOperations(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req longrunningpb.ListOperationsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListOperations(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h operationsHandler) getOperation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req longrunningpb.GetOperationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetOperation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h operationsHandler) deleteOperation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req longrunningpb.DeleteOperationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeleteOperation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h operationsHandler) cancelOperation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req longrunningpb.CancelOperationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CancelOperation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h operationsHandler) waitOperation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req longrunningpb.WaitOperationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.WaitOperation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

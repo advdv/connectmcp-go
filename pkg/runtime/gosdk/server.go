@@ -57,14 +57,14 @@ func (w *server) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
 	}
 
 	w.s.AddTool(mcpTool, func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		var args map[string]any
+		// Absent arguments are an empty object. Arguments that are not a JSON
+		// object are passed on as nil, which the handler reports back to the
+		// model as a correctable tool error instead of a protocol error.
+		args := map[string]any{}
 		if len(request.Params.Arguments) > 0 {
 			if err := json.Unmarshal(request.Params.Arguments, &args); err != nil {
-				return nil, err
+				args = nil
 			}
-		}
-		if args == nil {
-			args = make(map[string]any)
 		}
 		result, err := handler(ctx, &runtime.CallToolRequest{
 			Arguments: args,

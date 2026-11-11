@@ -15,7 +15,7 @@
 // Handler-level round-trip tests: a model-shaped tools/call (discriminated oneof
 // wrapper, OpenAI-strict null siblings, malformed oneof) goes through the actual
 // generated/registered handler -> DecodeArguments -> protojson -> handler ->
-// EncodeMessage -> tool result, on both MCP adapters (mark3labs, go-sdk) and the
+// EncodeMessage -> tool result, on the go-sdk MCP adapter and the
 // dynamic RegisterService path (dynamicpb). This is the full schema->read->proto
 // round trip without a live model.
 package generator
@@ -25,22 +25,21 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	. "github.com/onsi/gomega"
 
-	"github.com/mark3labs/mcp-go/server"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// callMark3labs issues a tools/call over the JSON-RPC surface and returns the
+// callTool issues a tools/call over the JSON-RPC surface and returns the
 // parsed "result" object (content / structuredContent / isError).
-func callMark3labs(t *testing.T, raw *server.MCPServer, name string, args map[string]any) map[string]any {
+func callTool(t *testing.T, raw *mcptest.Server, name string, args map[string]any) map[string]any {
 	t.Helper()
 	req, _ := json.Marshal(map[string]any{
 		"jsonrpc": "2.0", "id": 1, "method": "tools/call",
@@ -76,14 +75,15 @@ func firstTextContent(t *testing.T, result map[string]any) string {
 	return text
 }
 
-func TestRTT_Mark3labs_OneofWrapper(t *testing.T) {
+func TestRTT_OneofWrapper(t *testing.T) {
 	g := NewWithT(t)
 	srv := &fullTestServer{}
-	raw, adapter := mark3labs.NewServer("t", "1")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	testdatamcp.RegisterTestServiceHandler(adapter, srv)
 
 	t.Run("happy discriminated wrapper", func(t *testing.T) {
-		callMark3labs(t, raw, "testdata_TestService_CreateItem", map[string]any{
+		callTool(t, raw, "testdata_TestService_CreateItem", map[string]any{
 			"name":      "Widget",
 			"item_type": map[string]any{"which": "product", "product": map[string]any{"price": 9.99, "quantity": 5}},
 		})
@@ -93,7 +93,7 @@ func TestRTT_Mark3labs_OneofWrapper(t *testing.T) {
 
 	t.Run("OpenAI-strict shape with null siblings", func(t *testing.T) {
 		// OpenAI strict sends every member; unused ones null.
-		callMark3labs(t, raw, "testdata_TestService_CreateItem", map[string]any{
+		callTool(t, raw, "testdata_TestService_CreateItem", map[string]any{
 			"name":        "W2",
 			"description": nil,
 			"item_type":   map[string]any{"which": "service", "product": nil, "service": map[string]any{"duration": "1h", "recurring": true}},
@@ -103,7 +103,7 @@ func TestRTT_Mark3labs_OneofWrapper(t *testing.T) {
 	})
 
 	t.Run("malformed oneof returns IsError result, not transport error", func(t *testing.T) {
-		result := callMark3labs(t, raw, "testdata_TestService_CreateItem", map[string]any{
+		result := callTool(t, raw, "testdata_TestService_CreateItem", map[string]any{
 			"name":      "bad",
 			"item_type": map[string]any{"which": "product", "product": nil, "service": map[string]any{"duration": "1h"}},
 		})
@@ -172,11 +172,12 @@ func TestRTT_DynamicPath(t *testing.T) {
 		}, nil
 	}
 
-	raw, adapter := mark3labs.NewServer("t", "1")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	gen.RegisterService(adapter, sd, handler, gen.RegisterServiceOptions{})
 
 	t.Run("input oneof decodes onto dynamicpb", func(t *testing.T) {
-		result := callMark3labs(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
+		result := callTool(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
 			"node": map[string]any{"which": "leaf", "leaf": "hello"},
 		})
 		g.Expect(result["isError"]).To(BeNil())
@@ -188,7 +189,7 @@ func TestRTT_DynamicPath(t *testing.T) {
 	})
 
 	t.Run("response false-bool oneof re-wrapped which-first", func(t *testing.T) {
-		result := callMark3labs(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
+		result := callTool(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
 			"node": map[string]any{"which": "leaf", "leaf": "x"},
 		})
 		text := firstTextContent(t, result)
@@ -204,7 +205,7 @@ func TestRTT_DynamicPath(t *testing.T) {
 	})
 
 	t.Run("malformed oneof -> IsError", func(t *testing.T) {
-		result := callMark3labs(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
+		result := callTool(t, raw, "testdata_EdgeCaseService_OneofRecursive", map[string]any{
 			"node": map[string]any{"which": "tree"}, // no value supplied
 		})
 		g.Expect(result["isError"]).To(Equal(true))

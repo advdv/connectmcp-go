@@ -10,8 +10,6 @@ import (
 import (
 	"context"
 	"encoding/json"
-	"connectrpc.com/connect"
-	grpc "google.golang.org/grpc"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 )
 
@@ -21,14 +19,17 @@ var (
 	ToolNamingService_GetWidgetTool                                               = runtime.Tool{Name: "testdata_ToolNamingService_GetWidget", Description: "Derived: full proto path with underscores, unchanged behavior.\n", RawInputSchema: json.RawMessage(`{"properties":{"id":{"type":"string"}},"required":[],"type":"object"}`), RawOutputSchema: json.RawMessage(`{"properties":{"result":{"type":"string"}},"required":[],"type":"object"}`)}
 )
 
-// ToolNamingServiceServer is compatible with the grpc-go server interface.
+// ToolNamingServiceServer is the set of unary RPCs exposed as MCP tools. It is
+// satisfied by connect-go v2 handlers and clients alike (and by grpc-go
+// servers), so tool calls can be served locally or forwarded to a remote.
 type ToolNamingServiceServer interface {
 	GetDashboard(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	GetEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	GetWidget(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 }
 
-// RegisterToolNamingServiceHandler registers standard MCP handlers for ToolNamingService
+// RegisterToolNamingServiceHandler registers an MCP tool for every unary RPC of
+// ToolNamingService, served by srv: a service implementation or a connect-go v2 client.
 func RegisterToolNamingServiceHandler(s runtime.MCPServer, srv ToolNamingServiceServer, opts ...runtime.Option) {
 	config := runtime.NewConfig()
 	for _, opt := range opts {
@@ -154,264 +155,6 @@ func RegisterToolNamingServiceHandler(s runtime.MCPServer, srv ToolNamingService
 				return nil, err
 			}
 
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// ToolNamingServiceClient is compatible with the grpc-go client interface.
-type ToolNamingServiceClient interface {
-	GetDashboard(ctx context.Context, req *testdata.ToolNamingRequest, opts ...grpc.CallOption) (*testdata.ToolNamingResponse, error)
-	GetEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, req *testdata.ToolNamingRequest, opts ...grpc.CallOption) (*testdata.ToolNamingResponse, error)
-	GetWidget(ctx context.Context, req *testdata.ToolNamingRequest, opts ...grpc.CallOption) (*testdata.ToolNamingResponse, error)
-}
-
-// ConnectToolNamingServiceClient is compatible with the connectrpc-go client interface.
-type ConnectToolNamingServiceClient interface {
-	GetDashboard(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
-	GetEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
-	GetWidget(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
-}
-
-// ForwardToConnectToolNamingServiceClient registers a connectrpc client, to forward MCP calls to it.
-func ForwardToConnectToolNamingServiceClient(s runtime.MCPServer, client ConnectToolNamingServiceClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	GetDashboardTool := ToolNamingService_GetDashboardTool
-	GetDashboardTool = runtime.ApplyConfig(GetDashboardTool, config)
-
-	if config.ShouldRegister(GetDashboardTool.Name) {
-		s.AddTool(GetDashboardTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetDashboard(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	GetEquityResearchReportForInstitutionalAndRetailClientsTool := ToolNamingService_GetEquityResearchReportForInstitutionalAndRetailClientsTool
-	GetEquityResearchReportForInstitutionalAndRetailClientsTool = runtime.ApplyConfig(GetEquityResearchReportForInstitutionalAndRetailClientsTool, config)
-
-	if config.ShouldRegister(GetEquityResearchReportForInstitutionalAndRetailClientsTool.Name) {
-		s.AddTool(GetEquityResearchReportForInstitutionalAndRetailClientsTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	GetWidgetTool := ToolNamingService_GetWidgetTool
-	GetWidgetTool = runtime.ApplyConfig(GetWidgetTool, config)
-
-	if config.ShouldRegister(GetWidgetTool.Name) {
-		s.AddTool(GetWidgetTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetWidget(ctx, connect.NewRequest(&req))
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp.Msg)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-}
-
-// ForwardToToolNamingServiceClient registers a gRPC client, to forward MCP calls to it.
-func ForwardToToolNamingServiceClient(s runtime.MCPServer, client ToolNamingServiceClient, opts ...runtime.Option) {
-	config := runtime.NewConfig()
-	for _, opt := range opts {
-		opt(config)
-	}
-	GetDashboardTool := ToolNamingService_GetDashboardTool
-	GetDashboardTool = runtime.ApplyConfig(GetDashboardTool, config)
-
-	if config.ShouldRegister(GetDashboardTool.Name) {
-		s.AddTool(GetDashboardTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetDashboard(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	GetEquityResearchReportForInstitutionalAndRetailClientsTool := ToolNamingService_GetEquityResearchReportForInstitutionalAndRetailClientsTool
-	GetEquityResearchReportForInstitutionalAndRetailClientsTool = runtime.ApplyConfig(GetEquityResearchReportForInstitutionalAndRetailClientsTool, config)
-
-	if config.ShouldRegister(GetEquityResearchReportForInstitutionalAndRetailClientsTool.Name) {
-		s.AddTool(GetEquityResearchReportForInstitutionalAndRetailClientsTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
-			return runtime.NewToolResultJSON(structured), nil
-		})
-	}
-	GetWidgetTool := ToolNamingService_GetWidgetTool
-	GetWidgetTool = runtime.ApplyConfig(GetWidgetTool, config)
-
-	if config.ShouldRegister(GetWidgetTool.Name) {
-		s.AddTool(GetWidgetTool, func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
-			var req testdata.ToolNamingRequest
-
-			message := request.Arguments
-
-			// Extract extra properties if configured
-			for _, prop := range config.ExtraProperties {
-				if propVal, ok := message[prop.Name]; ok {
-					ctx = context.WithValue(ctx, prop.ContextKey, propVal)
-				}
-			}
-
-			if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), message); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			// Failures are returned to the model as a tool error naming the bad field,
-			// so it can correct the arguments and call the tool again.
-			if err := runtime.UnmarshalArguments(message, &req); err != nil {
-				return runtime.NewToolResultError(err.Error()), nil
-			}
-
-			resp, err := client.GetWidget(ctx, &req)
-			if err != nil {
-				return runtime.HandleError(err)
-			}
-
-			structured, err := runtime.EncodeMessage(resp)
-			if err != nil {
-				return nil, err
-			}
 			return runtime.NewToolResultJSON(structured), nil
 		})
 	}

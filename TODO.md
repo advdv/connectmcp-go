@@ -17,7 +17,8 @@
 
 ## Migration
 
-- [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- runtime.MCPServer interface with adapter packages for both libraries. Generated code is MCP-library-agnostic.
+- [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- runtime.MCPServer interface with a go-sdk adapter; the mark3labs adapter has been removed.
+- [x] **Native connect-go v2** -- generated code is connect-only (no gRPC or connect v1 forwarders); connect v2 handlers and clients register directly.
 
 ## Bazel
 

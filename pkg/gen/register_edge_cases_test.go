@@ -6,10 +6,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	mcpserver "github.com/mark3labs/mcp-go/server"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -25,8 +24,8 @@ func TestRegisterService_HandlerReturnsError(t *testing.T) {
 		return nil, errors.New("handler exploded")
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
 
@@ -70,8 +69,8 @@ func TestRegisterService_CommentProvider(t *testing.T) {
 		"TestValidation":        "Validate input with protovalidate",
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		CommentProvider: func(method protoreflect.MethodDescriptor) string {
 			return comments[string(method.Name())]
@@ -131,8 +130,8 @@ func TestRegisterService_NilCommentProvider(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		// CommentProvider is nil - should result in empty descriptions
 	})
@@ -187,8 +186,8 @@ func TestRegisterService_ExtraPropertyNotInArgs(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		ExtraProperties: []runtime.ExtraProperty{
 			{
@@ -230,8 +229,8 @@ func TestRegisterService_EdgeCaseService_AllMethods(t *testing.T) {
 		return DynamicNewMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{})
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{})
 
 	ctx := context.Background()
 	_ = server.HandleMessage(ctx, json.RawMessage(`{
@@ -298,8 +297,8 @@ func TestRegisterService_DiscardUnknownFields(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
 
@@ -336,8 +335,8 @@ func TestRegisterService_MultipleExtraProperties(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		ExtraProperties: []runtime.ExtraProperty{
 			{Name: "auth_token", Description: "Auth token", Required: true, ContextKey: tokenKey{}},
@@ -379,8 +378,8 @@ func TestRegisterService_ToolCallReturnsResponse(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
 
@@ -468,8 +467,8 @@ func TestRegisterService_EmptyArguments(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
 
@@ -498,8 +497,8 @@ func TestRegisterService_ExtraPropertiesInSchema(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		ExtraProperties: []runtime.ExtraProperty{
 			{Name: "session_id", Description: "Session identifier", Required: true, ContextKey: "session"},

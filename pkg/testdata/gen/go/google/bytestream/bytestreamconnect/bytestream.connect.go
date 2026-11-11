@@ -19,41 +19,56 @@
 package bytestreamconnect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	bytestream "google.golang.org/genproto/googleapis/bytestream"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ByteStreamName is the fully-qualified name of the ByteStream service.
 	ByteStreamName = "google.bytestream.ByteStream"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ByteStreamReadProcedure is the fully-qualified name of the ByteStream's Read RPC.
+	// ByteStreamReadProcedure is the procedure name of the ByteStream's Read RPC.
 	ByteStreamReadProcedure = "/google.bytestream.ByteStream/Read"
-	// ByteStreamWriteProcedure is the fully-qualified name of the ByteStream's Write RPC.
+	// ByteStreamWriteProcedure is the procedure name of the ByteStream's Write RPC.
 	ByteStreamWriteProcedure = "/google.bytestream.ByteStream/Write"
-	// ByteStreamQueryWriteStatusProcedure is the fully-qualified name of the ByteStream's
-	// QueryWriteStatus RPC.
+	// ByteStreamQueryWriteStatusProcedure is the procedure name of the ByteStream's QueryWriteStatus
+	// RPC.
 	ByteStreamQueryWriteStatusProcedure = "/google.bytestream.ByteStream/QueryWriteStatus"
+)
+
+var (
+	byteStreamReadSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     bytestream.File_google_bytestream_bytestream_proto.Services().ByName("ByteStream").Methods().ByName("Read"),
+			Procedure:  ByteStreamReadProcedure,
+		}
+	})
+	byteStreamWriteSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeClient,
+			Schema:     bytestream.File_google_bytestream_bytestream_proto.Services().ByName("ByteStream").Methods().ByName("Write"),
+			Procedure:  ByteStreamWriteProcedure,
+		}
+	})
+	byteStreamQueryWriteStatusSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     bytestream.File_google_bytestream_bytestream_proto.Services().ByName("ByteStream").Methods().ByName("QueryWriteStatus"),
+			Procedure:  ByteStreamQueryWriteStatusProcedure,
+		}
+	})
 )
 
 // ByteStreamClient is a client for the google.bytestream.ByteStream service.
@@ -61,7 +76,7 @@ type ByteStreamClient interface {
 	// `Read()` is used to retrieve the contents of a resource as a sequence
 	// of bytes. The bytes are returned in a sequence of responses, and the
 	// responses are delivered as the results of a server-side streaming RPC.
-	Read(context.Context, *connect.Request[bytestream.ReadRequest]) (*connect.ServerStreamForClient[bytestream.ReadResponse], error)
+	Read(context.Context, *bytestream.ReadRequest) (ByteStreamReadClientStream, error)
 	// `Write()` is used to send the contents of a resource as a sequence of
 	// bytes. The bytes are sent in a sequence of request protos of a client-side
 	// streaming RPC.
@@ -84,7 +99,7 @@ type ByteStreamClient interface {
 	// check the `WriteResponse` it receives to determine how much data the
 	// service was able to commit and whether the service views the resource as
 	// `complete` or not.
-	Write(context.Context) *connect.ClientStreamForClient[bytestream.WriteRequest, bytestream.WriteResponse]
+	Write(context.Context) (ByteStreamWriteClientStream, error)
 	// `QueryWriteStatus()` is used to find the `committed_size` for a resource
 	// that is being written, which can then be used as the `write_offset` for
 	// the next `Write()` call.
@@ -99,61 +114,62 @@ type ByteStreamClient interface {
 	// evicted. For any sequence of `QueryWriteStatus()` calls for a given
 	// resource name, the sequence of returned `committed_size` values will be
 	// non-decreasing.
-	QueryWriteStatus(context.Context, *connect.Request[bytestream.QueryWriteStatusRequest]) (*connect.Response[bytestream.QueryWriteStatusResponse], error)
+	QueryWriteStatus(context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error)
 }
 
-// NewByteStreamClient constructs a client for the google.bytestream.ByteStream service. By default,
-// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
-// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
-// or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewByteStreamClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ByteStreamClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	byteStreamMethods := bytestream.File_google_bytestream_bytestream_proto.Services().ByName("ByteStream").Methods()
-	return &byteStreamClient{
-		read: connect.NewClient[bytestream.ReadRequest, bytestream.ReadResponse](
-			httpClient,
-			baseURL+ByteStreamReadProcedure,
-			connect.WithSchema(byteStreamMethods.ByName("Read")),
-			connect.WithClientOptions(opts...),
-		),
-		write: connect.NewClient[bytestream.WriteRequest, bytestream.WriteResponse](
-			httpClient,
-			baseURL+ByteStreamWriteProcedure,
-			connect.WithSchema(byteStreamMethods.ByName("Write")),
-			connect.WithClientOptions(opts...),
-		),
-		queryWriteStatus: connect.NewClient[bytestream.QueryWriteStatusRequest, bytestream.QueryWriteStatusResponse](
-			httpClient,
-			baseURL+ByteStreamQueryWriteStatusProcedure,
-			connect.WithSchema(byteStreamMethods.ByName("QueryWriteStatus")),
-			connect.WithClientOptions(opts...),
-		),
+// NewByteStreamClient constructs a client for the google.bytestream.ByteStream service. Multiple
+// service clients may share a single connect.Client.
+func NewByteStreamClient(client *connect.Client) ByteStreamClient {
+	return &byteStreamClient{client: client}
+}
+
+// ByteStreamReadClientStream is the client stream for the ByteStream's Read RPC.
+type ByteStreamReadClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s ByteStreamReadClientStream) Receive() (*bytestream.ReadResponse, error) {
+	var res bytestream.ReadResponse
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
 	}
+	return &res, nil
 }
 
-// byteStreamClient implements ByteStreamClient.
-type byteStreamClient struct {
-	read             *connect.Client[bytestream.ReadRequest, bytestream.ReadResponse]
-	write            *connect.Client[bytestream.WriteRequest, bytestream.WriteResponse]
-	queryWriteStatus *connect.Client[bytestream.QueryWriteStatusRequest, bytestream.QueryWriteStatusResponse]
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s ByteStreamReadClientStream) Close() error {
+	return s.stream.Close()
 }
 
-// Read calls google.bytestream.ByteStream.Read.
-func (c *byteStreamClient) Read(ctx context.Context, req *connect.Request[bytestream.ReadRequest]) (*connect.ServerStreamForClient[bytestream.ReadResponse], error) {
-	return c.read.CallServerStream(ctx, req)
+// ByteStreamWriteClientStream is the client stream for the ByteStream's Write RPC.
+type ByteStreamWriteClientStream struct {
+	stream connect.ClientStream
 }
 
-// Write calls google.bytestream.ByteStream.Write.
-func (c *byteStreamClient) Write(ctx context.Context) *connect.ClientStreamForClient[bytestream.WriteRequest, bytestream.WriteResponse] {
-	return c.write.CallClientStream(ctx)
+// SendHeaders opens the stream and flushes the request headers without a message. The first Send or
+// Receive does this implicitly.
+func (s ByteStreamWriteClientStream) SendHeaders() error {
+	return s.stream.SendHeaders()
 }
 
-// QueryWriteStatus calls google.bytestream.ByteStream.QueryWriteStatus.
-func (c *byteStreamClient) QueryWriteStatus(ctx context.Context, req *connect.Request[bytestream.QueryWriteStatusRequest]) (*connect.Response[bytestream.QueryWriteStatusResponse], error) {
-	return c.queryWriteStatus.CallUnary(ctx, req)
+// Send sends a request message to the server.
+func (s ByteStreamWriteClientStream) Send(req *bytestream.WriteRequest) error {
+	return s.stream.Send(req)
+}
+
+// CloseAndReceive closes the request side of the stream and returns the single response message. It
+// reads the stream to completion to release its resources.
+func (s ByteStreamWriteClientStream) CloseAndReceive() (*bytestream.WriteResponse, error) {
+	if err := s.stream.CloseSend(); err != nil {
+		return nil, err
+	}
+	var res bytestream.WriteResponse
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 // ByteStreamHandler is an implementation of the google.bytestream.ByteStream service.
@@ -161,7 +177,7 @@ type ByteStreamHandler interface {
 	// `Read()` is used to retrieve the contents of a resource as a sequence
 	// of bytes. The bytes are returned in a sequence of responses, and the
 	// responses are delivered as the results of a server-side streaming RPC.
-	Read(context.Context, *connect.Request[bytestream.ReadRequest], *connect.ServerStream[bytestream.ReadResponse]) error
+	Read(context.Context, *bytestream.ReadRequest, ByteStreamReadServerStream) error
 	// `Write()` is used to send the contents of a resource as a sequence of
 	// bytes. The bytes are sent in a sequence of request protos of a client-side
 	// streaming RPC.
@@ -184,7 +200,7 @@ type ByteStreamHandler interface {
 	// check the `WriteResponse` it receives to determine how much data the
 	// service was able to commit and whether the service views the resource as
 	// `complete` or not.
-	Write(context.Context, *connect.ClientStream[bytestream.WriteRequest]) (*connect.Response[bytestream.WriteResponse], error)
+	Write(context.Context, ByteStreamWriteServerStream) (*bytestream.WriteResponse, error)
 	// `QueryWriteStatus()` is used to find the `committed_size` for a resource
 	// that is being written, which can then be used as the `write_offset` for
 	// the next `Write()` call.
@@ -199,59 +215,118 @@ type ByteStreamHandler interface {
 	// evicted. For any sequence of `QueryWriteStatus()` calls for a given
 	// resource name, the sequence of returned `committed_size` values will be
 	// non-decreasing.
-	QueryWriteStatus(context.Context, *connect.Request[bytestream.QueryWriteStatusRequest]) (*connect.Response[bytestream.QueryWriteStatusResponse], error)
+	QueryWriteStatus(context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error)
 }
 
-// NewByteStreamHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewByteStreamHandler(svc ByteStreamHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	byteStreamMethods := bytestream.File_google_bytestream_bytestream_proto.Services().ByName("ByteStream").Methods()
-	byteStreamReadHandler := connect.NewServerStreamHandler(
-		ByteStreamReadProcedure,
-		svc.Read,
-		connect.WithSchema(byteStreamMethods.ByName("Read")),
-		connect.WithHandlerOptions(opts...),
+// RegisterByteStreamHandler registers svc as the google.bytestream.ByteStream implementation on
+// server.
+func RegisterByteStreamHandler(server *connect.Server, svc ByteStreamHandler) {
+	adapter := byteStreamHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: byteStreamReadSpec(), Handler: adapter.read},
+		connect.Method{Spec: byteStreamWriteSpec(), Handler: adapter.write},
+		connect.Method{Spec: byteStreamQueryWriteStatusSpec(), Handler: adapter.queryWriteStatus},
 	)
-	byteStreamWriteHandler := connect.NewClientStreamHandler(
-		ByteStreamWriteProcedure,
-		svc.Write,
-		connect.WithSchema(byteStreamMethods.ByName("Write")),
-		connect.WithHandlerOptions(opts...),
-	)
-	byteStreamQueryWriteStatusHandler := connect.NewUnaryHandler(
-		ByteStreamQueryWriteStatusProcedure,
-		svc.QueryWriteStatus,
-		connect.WithSchema(byteStreamMethods.ByName("QueryWriteStatus")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/google.bytestream.ByteStream/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ByteStreamReadProcedure:
-			byteStreamReadHandler.ServeHTTP(w, r)
-		case ByteStreamWriteProcedure:
-			byteStreamWriteHandler.ServeHTTP(w, r)
-		case ByteStreamQueryWriteStatusProcedure:
-			byteStreamQueryWriteStatusHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+}
+
+// ByteStreamReadServerStream is the server stream for the ByteStream's Read RPC.
+type ByteStreamReadServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s ByteStreamReadServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s ByteStreamReadServerStream) Send(res *bytestream.ReadResponse) error {
+	return s.stream.Send(res)
+}
+
+// ByteStreamWriteServerStream is the server stream for the ByteStream's Write RPC.
+type ByteStreamWriteServerStream struct {
+	stream connect.ServerStream
+}
+
+// Receive returns the next request message from the client.
+func (s ByteStreamWriteServerStream) Receive() (*bytestream.WriteRequest, error) {
+	var req bytestream.WriteRequest
+	if err := s.stream.Receive(&req); err != nil {
+		return nil, err
+	}
+	return &req, nil
 }
 
 // UnimplementedByteStreamHandler returns CodeUnimplemented from all methods.
 type UnimplementedByteStreamHandler struct{}
 
-func (UnimplementedByteStreamHandler) Read(context.Context, *connect.Request[bytestream.ReadRequest], *connect.ServerStream[bytestream.ReadResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("google.bytestream.ByteStream.Read is not implemented"))
+func (UnimplementedByteStreamHandler) Read(context.Context, *bytestream.ReadRequest, ByteStreamReadServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "google.bytestream.ByteStream.Read is not implemented")
 }
 
-func (UnimplementedByteStreamHandler) Write(context.Context, *connect.ClientStream[bytestream.WriteRequest]) (*connect.Response[bytestream.WriteResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.bytestream.ByteStream.Write is not implemented"))
+func (UnimplementedByteStreamHandler) Write(context.Context, ByteStreamWriteServerStream) (*bytestream.WriteResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.bytestream.ByteStream.Write is not implemented")
 }
 
-func (UnimplementedByteStreamHandler) QueryWriteStatus(context.Context, *connect.Request[bytestream.QueryWriteStatusRequest]) (*connect.Response[bytestream.QueryWriteStatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("google.bytestream.ByteStream.QueryWriteStatus is not implemented"))
+func (UnimplementedByteStreamHandler) QueryWriteStatus(context.Context, *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "google.bytestream.ByteStream.QueryWriteStatus is not implemented")
+}
+
+type byteStreamClient struct {
+	client *connect.Client
+}
+
+func (c *byteStreamClient) Read(ctx context.Context, req *bytestream.ReadRequest) (ByteStreamReadClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, byteStreamReadSpec(), req)
+	if err != nil {
+		return ByteStreamReadClientStream{}, err
+	}
+	return ByteStreamReadClientStream{stream: stream}, nil
+}
+
+func (c *byteStreamClient) Write(ctx context.Context) (ByteStreamWriteClientStream, error) {
+	stream, err := c.client.CallClientStream(ctx, byteStreamWriteSpec())
+	if err != nil {
+		return ByteStreamWriteClientStream{}, err
+	}
+	return ByteStreamWriteClientStream{stream: stream}, nil
+}
+
+func (c *byteStreamClient) QueryWriteStatus(ctx context.Context, req *bytestream.QueryWriteStatusRequest) (*bytestream.QueryWriteStatusResponse, error) {
+	var res bytestream.QueryWriteStatusResponse
+	if err := c.client.CallUnary(ctx, byteStreamQueryWriteStatusSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type byteStreamHandler struct{ svc ByteStreamHandler }
+
+func (h byteStreamHandler) read(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req bytestream.ReadRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.Read(ctx, &req, ByteStreamReadServerStream{stream: stream})
+}
+
+func (h byteStreamHandler) write(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	res, err := h.svc.Write(ctx, ByteStreamWriteServerStream{stream: stream})
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h byteStreamHandler) queryWriteStatus(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req bytestream.QueryWriteStatusRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.QueryWriteStatus(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -3,24 +3,27 @@
 > [!WARNING]
 > This repository is a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) meant for internal use. Do not rely on its stability: it may change or break without notice. Use the [upstream repository](https://github.com/redpanda-data/protoc-gen-go-mcp) instead.
 
+> [!WARNING]
+> The changes in this fork were made with the help of AI coding tools. The code has been reviewed by a human.
+
 [![Test](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/advdv/protoc-gen-go-mcp)](https://goreportcard.com/report/github.com/advdv/protoc-gen-go-mcp)
 [![codecov](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp)
 
-**`protoc-gen-go-mcp`** is a [Protocol Buffers](https://protobuf.dev) compiler plugin that generates [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers for your `gRPC` or `ConnectRPC` APIs.
+**`protoc-gen-go-mcp`** is a [Protocol Buffers](https://protobuf.dev) compiler plugin that generates [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers for your [ConnectRPC](https://connectrpc.com) APIs, built for [connect-go v2](https://connectrpc.com/docs/go/migrating-to-v2/).
 
-It generates `*.pb.mcp.go` files for each protobuf service, enabling you to delegate handlers directly to gRPC servers or clients. Under the hood, MCP uses JSON Schema for tool inputs -- `protoc-gen-go-mcp` auto-generates these schemas from your method input descriptors.
+It generates `*.pb.mcp.go` files for each protobuf service, enabling you to serve MCP tool calls from a service implementation, or forward them to any connect-go v2 client. Under the hood, MCP uses JSON Schema for tool inputs -- `protoc-gen-go-mcp` auto-generates these schemas from your method input descriptors.
 
-Generated code is **MCP-library-agnostic**: pick [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK) or [mark3labs/mcp-go](https://github.com/mark3labs/mcp-go) at server creation time through a thin adapter -- no regeneration needed.
+Generated code programs against a one-method `runtime.MCPServer` interface and imports neither an MCP library nor an RPC library. An adapter for [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK) is included.
 
 ## Features
 
 - Auto-generates MCP handlers from your `.proto` services
 - Outputs JSON Schema for method inputs
-- Wire up to gRPC or ConnectRPC servers/clients
+- Wire up to connect-go v2 handlers and clients, in-process or remote
 - Easy integration with [`buf`](https://buf.build)
 - Runtime LLM provider selection -- standard MCP or OpenAI-compatible schemas
-- MCP library agnostic -- official go-sdk and mark3labs/mcp-go both supported
+- Ships an adapter for the official MCP go-sdk
 
 ## Usage
 
@@ -56,9 +59,7 @@ gen
 
 ### Setting up the MCP server
 
-Generated code programs against the `runtime.MCPServer` interface. You choose the backing MCP library by importing the corresponding adapter package.
-
-#### With the official go-sdk (recommended)
+Generated code programs against the `runtime.MCPServer` interface. The `gosdk` package adapts the official go-sdk server to it:
 
 ```go
 import (
@@ -75,29 +76,12 @@ testdatamcp.RegisterTestServiceHandler(s, &srv)
 raw.Run(ctx, &mcp.StdioTransport{})
 ```
 
-#### With mark3labs/mcp-go
-
-```go
-import (
-    "github.com/mark3labs/mcp-go/server"
-    "github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
-)
-
-// Create server -- raw is *server.MCPServer for transport, s is runtime.MCPServer for tools.
-raw, s := mark3labs.NewServer("my-server", "1.0.0")
-
-testdatamcp.RegisterTestServiceHandler(s, &srv)
-
-// Serve over stdio
-server.ServeStdio(raw)
-```
-
 ### Wiring up handlers
 
 Example for in-process registration:
 
 ```go
-srv := testServer{} // your gRPC implementation
+srv := testServer{} // your service implementation
 
 // Register all RPC methods as tools on the MCP server
 testdatamcp.RegisterTestServiceHandler(s, &srv)
@@ -118,21 +102,50 @@ testdatamcp.RegisterTestServiceHandler(s, &srv)        // Standard MCP
 testdatamcp.RegisterTestServiceHandlerOpenAI(s, &srv)  // OpenAI-compatible
 ```
 
-### Wiring up with grpc and connectrpc client
+### Wiring up with connect-go v2
 
-Forward MCP tool calls directly to gRPC clients:
+In connect-go v2, generated handlers and clients share the plain `Method(ctx, *Req) (*Resp, error)` signature of the interface `protoc-gen-go-mcp` generates. Both can therefore be passed to `Register*Handler` as they are.
 
-```go
-testdatamcp.ForwardToTestServiceClient(s, myGrpcClient)
-```
-
-Same for connectrpc:
+Forward MCP tool calls to a remote connect server:
 
 ```go
-testdatamcp.ForwardToConnectTestServiceClient(s, myConnectClient)
+client := testdataconnect.NewTestServiceClient(connect.NewClient(
+    connecthttp.NewTransport(http.DefaultClient, "https://api.example.com"),
+))
+testdatamcp.RegisterTestServiceHandler(s, client)
 ```
 
-This directly connects the MCP handler to the client, requiring zero boilerplate.
+Or call a `*connect.Server` in the same process through the in-process transport, so that the server's interceptors (auth, validation, tracing) run for every tool call:
+
+```go
+server := connect.NewServer(validate.NewServerInterceptor())
+testdataconnect.RegisterTestServiceHandler(server, &srv)
+
+client := testdataconnect.NewTestServiceClient(connect.NewClient(connectinprocess.New(server)))
+testdatamcp.RegisterTestServiceHandler(s, client)
+```
+
+Passing `&srv` directly also works, but bypasses the interceptors. See [`examples/connect`](examples/connect) for a runnable version.
+
+Only unary RPCs become tools; streaming RPCs are skipped.
+
+### Errors
+
+An error returned from a handler or client is given to the model as a tool error (`isError: true`) containing JSON. For a `*connect.Error` anywhere in the error chain this carries its code, message and details:
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "no such item",
+  "details": [{"@type": "type.googleapis.com/google.rpc.ResourceInfo", "resourceType": "item", "resourceName": "item-1"}]
+}
+```
+
+Any other error is reported with code `UNKNOWN` and its `Error()` text, so in a local handler use `connect.NewError(...)` and keep internals in `.WithCause(err)`, which is never shown to the model.
+
+### Using grpc-go
+
+grpc-go is not supported out of the box. A grpc-go server implementation still satisfies the generated interface, but its `status` errors are reported as `UNKNOWN`, and a grpc-go client needs a small wrapper that drops the `...grpc.CallOption` parameter.
 
 ### Extra properties
 
@@ -152,7 +165,6 @@ option := runtime.WithExtraProperties(
 
 // Use with any generated function
 testdatamcp.RegisterTestServiceHandler(s, &srv, option)
-testdatamcp.ForwardToTestServiceClient(s, client, option)
 ```
 
 ### Tool name prefixing
@@ -202,58 +214,6 @@ managed:
 ```
 
 To match the plugin version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/protoc-gen-go-mcp:<git-sha>`.
-
-## Migrating from mark3labs-only (pre-v0.2)
-
-Generated code no longer imports `mark3labs/mcp-go` directly. It programs against the `runtime.MCPServer` interface, and you pick the MCP library via an adapter package.
-
-### 1. Server creation
-
-```go
-// Before
-s := server.NewMCPServer("name", "1.0", server.WithToolCapabilities(true))
-
-// After -- mark3labs
-raw, s := mark3labs.NewServer("name", "1.0", server.WithToolCapabilities(true))
-// raw is *server.MCPServer for transport (ServeStdio, NewStreamableHTTPServer, etc.)
-// s is runtime.MCPServer for tool registration
-
-// After -- official go-sdk
-raw, s := gosdk.NewServer("name", "1.0")
-```
-
-### 2. Tool registration
-
-Generated `Register*Handler` functions now take `runtime.MCPServer` instead of `*server.MCPServer`. Just pass `s` from step 1.
-
-If you were calling `s.AddTool()` manually with mark3labs types to do name prefixing, delete that code and use `WithNamePrefix`:
-
-```go
-// Before: 60 lines of manual register.go per service
-sql.RegisterTools(s, "postgres", handler) // custom wrapper around s.AddTool(mcp.Tool, ...)
-
-// After: one line
-sqlv1mcp.RegisterSQLServiceHandler(s, handler, runtime.WithNamePrefix("postgres"))
-```
-
-### 3. HandleError return type
-
-`runtime.HandleError()` now returns `*runtime.CallToolResult` instead of `*mcp.CallToolResult`. If you call it from custom handlers, update the return type.
-
-### 4. Transport
-
-Transport setup is unchanged -- use the raw server from step 1:
-
-```go
-// mark3labs stdio
-server.ServeStdio(raw)
-
-// mark3labs streamable HTTP
-mcpserver.NewStreamableHTTPServer(raw)
-
-// go-sdk stdio
-raw.Run(ctx, &mcp.StdioTransport{})
-```
 
 ## LLM Provider Compatibility
 
@@ -387,9 +347,10 @@ If the fully qualified RPC name (dots replaced with underscores) exceeds 64 char
 
 ## Limitations
 
-- No interceptor support (yet). Registering with a gRPC server bypasses interceptors.
+- Registering a service implementation directly bypasses connect interceptors. Register a client on the in-process transport instead (see "Wiring up with connect-go v2").
+- Only unary RPCs are exposed as tools.
 - Recursive message schemas lose field-level detail beyond 3 levels of nesting (see above). The LLM must encode deeper levels as JSON strings.
-- Extra properties added via `WithExtraProperties` must not collide with proto field names. If they do, the extra property value will be extracted into context but will also leak into the proto message.
+- Extra properties added via `WithExtraProperties` must not collide with proto field names. If they do, the value is extracted into context and, with generated handlers, also leaks into the proto message; with dynamic registration (`gen.RegisterService`) it is removed from the arguments, so the proto field of that name can never be set.
 
 ## Feedback
 

@@ -18,7 +18,5 @@ go_library(
     deps = [
         "//pkg/runtime",
         "//pkg/testdata/gen/go/testdata",
-        "@com_connectrpc_connect//:connect",
-        "@org_golang_google_grpc//:grpc",
     ],
 )

@@ -12,48 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main serves a service implementation as MCP tools over stdio.
 package main
 
 import (
 	"context"
 	"fmt"
+	"os"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
-	"github.com/mark3labs/mcp-go/server"
-)
-
-// Ensure our interface and the official gRPC interface are grpcClient
-var (
-	grpcClient testdata.TestServiceClient
-	_          = testdatamcp.TestServiceClient(grpcClient)
-)
-
-// Ensure our interface and the official connect-go interface are compatible
-var (
-	connectClient testdataconnect.TestServiceClient
-	_             = testdatamcp.ConnectTestServiceClient(connectClient)
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
-	// Create MCP server using mark3labs adapter
-	raw, s := mark3labs.NewServer(
-		"Example auto-generated gRPC-MCP server",
-		"1.0.0",
-	)
-
-	srv := testServer{}
+	// raw is the *mcp.Server for transport setup, s is the runtime.MCPServer
+	// the generated code registers tools on.
+	raw, s := gosdk.NewServer("Example auto-generated MCP server", "1.0.0")
 
 	// Register the generated MCP handlers.
-	testdatamcp.RegisterTestServiceHandler(s, &srv)
+	testdatamcp.RegisterTestServiceHandler(s, &testServer{})
 
-	testdatamcp.ForwardToConnectTestServiceClient(s, connectClient)
-	testdatamcp.ForwardToTestServiceClient(s, grpcClient)
-
-	if err := server.ServeStdio(raw); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if err := raw.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
+		os.Exit(1)
 	}
 }
 

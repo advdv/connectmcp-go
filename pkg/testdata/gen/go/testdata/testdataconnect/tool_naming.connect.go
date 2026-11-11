@@ -19,173 +19,177 @@
 package testdataconnect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ToolNamingServiceName is the fully-qualified name of the ToolNamingService service.
 	ToolNamingServiceName = "testdata.ToolNamingService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// ToolNamingServiceGetDashboardProcedure is the fully-qualified name of the ToolNamingService's
+	// ToolNamingServiceGetDashboardProcedure is the procedure name of the ToolNamingService's
 	// GetDashboard RPC.
 	ToolNamingServiceGetDashboardProcedure = "/testdata.ToolNamingService/GetDashboard"
-	// ToolNamingServiceGetWidgetProcedure is the fully-qualified name of the ToolNamingService's
-	// GetWidget RPC.
+	// ToolNamingServiceGetWidgetProcedure is the procedure name of the ToolNamingService's GetWidget
+	// RPC.
 	ToolNamingServiceGetWidgetProcedure = "/testdata.ToolNamingService/GetWidget"
 	// ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure is the
-	// fully-qualified name of the ToolNamingService's
-	// GetEquityResearchReportForInstitutionalAndRetailClients RPC.
+	// procedure name of the ToolNamingService's GetEquityResearchReportForInstitutionalAndRetailClients
+	// RPC.
 	ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure = "/testdata.ToolNamingService/GetEquityResearchReportForInstitutionalAndRetailClients"
+)
+
+var (
+	toolNamingServiceGetDashboardSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_tool_naming_proto.Services().ByName("ToolNamingService").Methods().ByName("GetDashboard"),
+			Procedure:  ToolNamingServiceGetDashboardProcedure,
+		}
+	})
+	toolNamingServiceGetWidgetSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_tool_naming_proto.Services().ByName("ToolNamingService").Methods().ByName("GetWidget"),
+			Procedure:  ToolNamingServiceGetWidgetProcedure,
+		}
+	})
+	toolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_tool_naming_proto.Services().ByName("ToolNamingService").Methods().ByName("GetEquityResearchReportForInstitutionalAndRetailClients"),
+			Procedure:  ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure,
+		}
+	})
 )
 
 // ToolNamingServiceClient is a client for the testdata.ToolNamingService service.
 type ToolNamingServiceClient interface {
 	// Configured: emitted exactly as authored, no service prefix.
-	GetDashboard(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetDashboard(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	// Derived: full proto path with underscores, unchanged behavior.
-	GetWidget(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetWidget(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	// Derived + mangled: exceeds 64 chars, so the emitted name is the
 	// hash-truncated form whose first character is always a letter.
-	GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 }
 
-// NewToolNamingServiceClient constructs a client for the testdata.ToolNamingService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewToolNamingServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ToolNamingServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	toolNamingServiceMethods := testdata.File_testdata_tool_naming_proto.Services().ByName("ToolNamingService").Methods()
-	return &toolNamingServiceClient{
-		getDashboard: connect.NewClient[testdata.ToolNamingRequest, testdata.ToolNamingResponse](
-			httpClient,
-			baseURL+ToolNamingServiceGetDashboardProcedure,
-			connect.WithSchema(toolNamingServiceMethods.ByName("GetDashboard")),
-			connect.WithClientOptions(opts...),
-		),
-		getWidget: connect.NewClient[testdata.ToolNamingRequest, testdata.ToolNamingResponse](
-			httpClient,
-			baseURL+ToolNamingServiceGetWidgetProcedure,
-			connect.WithSchema(toolNamingServiceMethods.ByName("GetWidget")),
-			connect.WithClientOptions(opts...),
-		),
-		getEquityResearchReportForInstitutionalAndRetailClients: connect.NewClient[testdata.ToolNamingRequest, testdata.ToolNamingResponse](
-			httpClient,
-			baseURL+ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure,
-			connect.WithSchema(toolNamingServiceMethods.ByName("GetEquityResearchReportForInstitutionalAndRetailClients")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// toolNamingServiceClient implements ToolNamingServiceClient.
-type toolNamingServiceClient struct {
-	getDashboard                                            *connect.Client[testdata.ToolNamingRequest, testdata.ToolNamingResponse]
-	getWidget                                               *connect.Client[testdata.ToolNamingRequest, testdata.ToolNamingResponse]
-	getEquityResearchReportForInstitutionalAndRetailClients *connect.Client[testdata.ToolNamingRequest, testdata.ToolNamingResponse]
-}
-
-// GetDashboard calls testdata.ToolNamingService.GetDashboard.
-func (c *toolNamingServiceClient) GetDashboard(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return c.getDashboard.CallUnary(ctx, req)
-}
-
-// GetWidget calls testdata.ToolNamingService.GetWidget.
-func (c *toolNamingServiceClient) GetWidget(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return c.getWidget.CallUnary(ctx, req)
-}
-
-// GetEquityResearchReportForInstitutionalAndRetailClients calls
-// testdata.ToolNamingService.GetEquityResearchReportForInstitutionalAndRetailClients.
-func (c *toolNamingServiceClient) GetEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, req *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return c.getEquityResearchReportForInstitutionalAndRetailClients.CallUnary(ctx, req)
+// NewToolNamingServiceClient constructs a client for the testdata.ToolNamingService service.
+// Multiple service clients may share a single connect.Client.
+func NewToolNamingServiceClient(client *connect.Client) ToolNamingServiceClient {
+	return &toolNamingServiceClient{client: client}
 }
 
 // ToolNamingServiceHandler is an implementation of the testdata.ToolNamingService service.
 type ToolNamingServiceHandler interface {
 	// Configured: emitted exactly as authored, no service prefix.
-	GetDashboard(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetDashboard(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	// Derived: full proto path with underscores, unchanged behavior.
-	GetWidget(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetWidget(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 	// Derived + mangled: exceeds 64 chars, so the emitted name is the
 	// hash-truncated form whose first character is always a letter.
-	GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error)
+	GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error)
 }
 
-// NewToolNamingServiceHandler builds an HTTP handler from the service implementation. It returns
-// the path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewToolNamingServiceHandler(svc ToolNamingServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	toolNamingServiceMethods := testdata.File_testdata_tool_naming_proto.Services().ByName("ToolNamingService").Methods()
-	toolNamingServiceGetDashboardHandler := connect.NewUnaryHandler(
-		ToolNamingServiceGetDashboardProcedure,
-		svc.GetDashboard,
-		connect.WithSchema(toolNamingServiceMethods.ByName("GetDashboard")),
-		connect.WithHandlerOptions(opts...),
+// RegisterToolNamingServiceHandler registers svc as the testdata.ToolNamingService implementation
+// on server.
+func RegisterToolNamingServiceHandler(server *connect.Server, svc ToolNamingServiceHandler) {
+	adapter := toolNamingServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: toolNamingServiceGetDashboardSpec(), Handler: adapter.getDashboard},
+		connect.Method{Spec: toolNamingServiceGetWidgetSpec(), Handler: adapter.getWidget},
+		connect.Method{Spec: toolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsSpec(), Handler: adapter.getEquityResearchReportForInstitutionalAndRetailClients},
 	)
-	toolNamingServiceGetWidgetHandler := connect.NewUnaryHandler(
-		ToolNamingServiceGetWidgetProcedure,
-		svc.GetWidget,
-		connect.WithSchema(toolNamingServiceMethods.ByName("GetWidget")),
-		connect.WithHandlerOptions(opts...),
-	)
-	toolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsHandler := connect.NewUnaryHandler(
-		ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure,
-		svc.GetEquityResearchReportForInstitutionalAndRetailClients,
-		connect.WithSchema(toolNamingServiceMethods.ByName("GetEquityResearchReportForInstitutionalAndRetailClients")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/testdata.ToolNamingService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case ToolNamingServiceGetDashboardProcedure:
-			toolNamingServiceGetDashboardHandler.ServeHTTP(w, r)
-		case ToolNamingServiceGetWidgetProcedure:
-			toolNamingServiceGetWidgetHandler.ServeHTTP(w, r)
-		case ToolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsProcedure:
-			toolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedToolNamingServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedToolNamingServiceHandler struct{}
 
-func (UnimplementedToolNamingServiceHandler) GetDashboard(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.ToolNamingService.GetDashboard is not implemented"))
+func (UnimplementedToolNamingServiceHandler) GetDashboard(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.ToolNamingService.GetDashboard is not implemented")
 }
 
-func (UnimplementedToolNamingServiceHandler) GetWidget(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.ToolNamingService.GetWidget is not implemented"))
+func (UnimplementedToolNamingServiceHandler) GetWidget(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.ToolNamingService.GetWidget is not implemented")
 }
 
-func (UnimplementedToolNamingServiceHandler) GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *connect.Request[testdata.ToolNamingRequest]) (*connect.Response[testdata.ToolNamingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.ToolNamingService.GetEquityResearchReportForInstitutionalAndRetailClients is not implemented"))
+func (UnimplementedToolNamingServiceHandler) GetEquityResearchReportForInstitutionalAndRetailClients(context.Context, *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.ToolNamingService.GetEquityResearchReportForInstitutionalAndRetailClients is not implemented")
+}
+
+type toolNamingServiceClient struct {
+	client *connect.Client
+}
+
+func (c *toolNamingServiceClient) GetDashboard(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	var res testdata.ToolNamingResponse
+	if err := c.client.CallUnary(ctx, toolNamingServiceGetDashboardSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *toolNamingServiceClient) GetWidget(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	var res testdata.ToolNamingResponse
+	if err := c.client.CallUnary(ctx, toolNamingServiceGetWidgetSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *toolNamingServiceClient) GetEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, req *testdata.ToolNamingRequest) (*testdata.ToolNamingResponse, error) {
+	var res testdata.ToolNamingResponse
+	if err := c.client.CallUnary(ctx, toolNamingServiceGetEquityResearchReportForInstitutionalAndRetailClientsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type toolNamingServiceHandler struct{ svc ToolNamingServiceHandler }
+
+func (h toolNamingServiceHandler) getDashboard(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.ToolNamingRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetDashboard(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h toolNamingServiceHandler) getWidget(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.ToolNamingRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetWidget(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h toolNamingServiceHandler) getEquityResearchReportForInstitutionalAndRetailClients(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.ToolNamingRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

@@ -19,11 +19,10 @@ import (
 	"encoding/json"
 )
 
-// MCPServer is the abstraction that both mark3labs/mcp-go and
-// modelcontextprotocol/go-sdk satisfy through thin adapter packages.
-// Generated code and the dynamic registration path (gen.RegisterService)
-// program against this interface so users can swap MCP libraries without
-// regenerating.
+// MCPServer is the minimal MCP server surface that generated code and the
+// dynamic registration path (gen.RegisterService) program against. The gosdk
+// package adapts the official modelcontextprotocol/go-sdk server to it; other
+// MCP libraries can be supported by implementing this one method.
 type MCPServer interface {
 	AddTool(tool Tool, handler ToolHandler)
 }

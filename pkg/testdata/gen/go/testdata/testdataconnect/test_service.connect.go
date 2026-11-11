@@ -19,198 +19,209 @@
 package testdataconnect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// TestServiceName is the fully-qualified name of the TestService service.
 	TestServiceName = "testdata.TestService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// TestServiceCreateItemProcedure is the fully-qualified name of the TestService's CreateItem RPC.
+	// TestServiceCreateItemProcedure is the procedure name of the TestService's CreateItem RPC.
 	TestServiceCreateItemProcedure = "/testdata.TestService/CreateItem"
-	// TestServiceGetItemProcedure is the fully-qualified name of the TestService's GetItem RPC.
+	// TestServiceGetItemProcedure is the procedure name of the TestService's GetItem RPC.
 	TestServiceGetItemProcedure = "/testdata.TestService/GetItem"
-	// TestServiceProcessWellKnownTypesProcedure is the fully-qualified name of the TestService's
+	// TestServiceProcessWellKnownTypesProcedure is the procedure name of the TestService's
 	// ProcessWellKnownTypes RPC.
 	TestServiceProcessWellKnownTypesProcedure = "/testdata.TestService/ProcessWellKnownTypes"
-	// TestServiceTestValidationProcedure is the fully-qualified name of the TestService's
-	// TestValidation RPC.
+	// TestServiceTestValidationProcedure is the procedure name of the TestService's TestValidation RPC.
 	TestServiceTestValidationProcedure = "/testdata.TestService/TestValidation"
+)
+
+var (
+	testServiceCreateItemSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("CreateItem"),
+			Procedure:  TestServiceCreateItemProcedure,
+		}
+	})
+	testServiceGetItemSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("GetItem"),
+			Procedure:  TestServiceGetItemProcedure,
+		}
+	})
+	testServiceProcessWellKnownTypesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("ProcessWellKnownTypes"),
+			Procedure:  TestServiceProcessWellKnownTypesProcedure,
+		}
+	})
+	testServiceTestValidationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("TestValidation"),
+			Procedure:  TestServiceTestValidationProcedure,
+		}
+	})
 )
 
 // TestServiceClient is a client for the testdata.TestService service.
 type TestServiceClient interface {
 	// CreateItem creates a new item
-	CreateItem(context.Context, *connect.Request[testdata.CreateItemRequest]) (*connect.Response[testdata.CreateItemResponse], error)
+	CreateItem(context.Context, *testdata.CreateItemRequest) (*testdata.CreateItemResponse, error)
 	// GetItem retrieves an item by ID
-	GetItem(context.Context, *connect.Request[testdata.GetItemRequest]) (*connect.Response[testdata.GetItemResponse], error)
+	GetItem(context.Context, *testdata.GetItemRequest) (*testdata.GetItemResponse, error)
 	// Test well-known types handling
-	ProcessWellKnownTypes(context.Context, *connect.Request[testdata.ProcessWellKnownTypesRequest]) (*connect.Response[testdata.ProcessWellKnownTypesResponse], error)
+	ProcessWellKnownTypes(context.Context, *testdata.ProcessWellKnownTypesRequest) (*testdata.ProcessWellKnownTypesResponse, error)
 	// Test protovalidate constraints
-	TestValidation(context.Context, *connect.Request[testdata.TestValidationRequest]) (*connect.Response[testdata.TestValidationResponse], error)
+	TestValidation(context.Context, *testdata.TestValidationRequest) (*testdata.TestValidationResponse, error)
 }
 
-// NewTestServiceClient constructs a client for the testdata.TestService service. By default, it
-// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewTestServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TestServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	testServiceMethods := testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods()
-	return &testServiceClient{
-		createItem: connect.NewClient[testdata.CreateItemRequest, testdata.CreateItemResponse](
-			httpClient,
-			baseURL+TestServiceCreateItemProcedure,
-			connect.WithSchema(testServiceMethods.ByName("CreateItem")),
-			connect.WithClientOptions(opts...),
-		),
-		getItem: connect.NewClient[testdata.GetItemRequest, testdata.GetItemResponse](
-			httpClient,
-			baseURL+TestServiceGetItemProcedure,
-			connect.WithSchema(testServiceMethods.ByName("GetItem")),
-			connect.WithClientOptions(opts...),
-		),
-		processWellKnownTypes: connect.NewClient[testdata.ProcessWellKnownTypesRequest, testdata.ProcessWellKnownTypesResponse](
-			httpClient,
-			baseURL+TestServiceProcessWellKnownTypesProcedure,
-			connect.WithSchema(testServiceMethods.ByName("ProcessWellKnownTypes")),
-			connect.WithClientOptions(opts...),
-		),
-		testValidation: connect.NewClient[testdata.TestValidationRequest, testdata.TestValidationResponse](
-			httpClient,
-			baseURL+TestServiceTestValidationProcedure,
-			connect.WithSchema(testServiceMethods.ByName("TestValidation")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// testServiceClient implements TestServiceClient.
-type testServiceClient struct {
-	createItem            *connect.Client[testdata.CreateItemRequest, testdata.CreateItemResponse]
-	getItem               *connect.Client[testdata.GetItemRequest, testdata.GetItemResponse]
-	processWellKnownTypes *connect.Client[testdata.ProcessWellKnownTypesRequest, testdata.ProcessWellKnownTypesResponse]
-	testValidation        *connect.Client[testdata.TestValidationRequest, testdata.TestValidationResponse]
-}
-
-// CreateItem calls testdata.TestService.CreateItem.
-func (c *testServiceClient) CreateItem(ctx context.Context, req *connect.Request[testdata.CreateItemRequest]) (*connect.Response[testdata.CreateItemResponse], error) {
-	return c.createItem.CallUnary(ctx, req)
-}
-
-// GetItem calls testdata.TestService.GetItem.
-func (c *testServiceClient) GetItem(ctx context.Context, req *connect.Request[testdata.GetItemRequest]) (*connect.Response[testdata.GetItemResponse], error) {
-	return c.getItem.CallUnary(ctx, req)
-}
-
-// ProcessWellKnownTypes calls testdata.TestService.ProcessWellKnownTypes.
-func (c *testServiceClient) ProcessWellKnownTypes(ctx context.Context, req *connect.Request[testdata.ProcessWellKnownTypesRequest]) (*connect.Response[testdata.ProcessWellKnownTypesResponse], error) {
-	return c.processWellKnownTypes.CallUnary(ctx, req)
-}
-
-// TestValidation calls testdata.TestService.TestValidation.
-func (c *testServiceClient) TestValidation(ctx context.Context, req *connect.Request[testdata.TestValidationRequest]) (*connect.Response[testdata.TestValidationResponse], error) {
-	return c.testValidation.CallUnary(ctx, req)
+// NewTestServiceClient constructs a client for the testdata.TestService service. Multiple service
+// clients may share a single connect.Client.
+func NewTestServiceClient(client *connect.Client) TestServiceClient {
+	return &testServiceClient{client: client}
 }
 
 // TestServiceHandler is an implementation of the testdata.TestService service.
 type TestServiceHandler interface {
 	// CreateItem creates a new item
-	CreateItem(context.Context, *connect.Request[testdata.CreateItemRequest]) (*connect.Response[testdata.CreateItemResponse], error)
+	CreateItem(context.Context, *testdata.CreateItemRequest) (*testdata.CreateItemResponse, error)
 	// GetItem retrieves an item by ID
-	GetItem(context.Context, *connect.Request[testdata.GetItemRequest]) (*connect.Response[testdata.GetItemResponse], error)
+	GetItem(context.Context, *testdata.GetItemRequest) (*testdata.GetItemResponse, error)
 	// Test well-known types handling
-	ProcessWellKnownTypes(context.Context, *connect.Request[testdata.ProcessWellKnownTypesRequest]) (*connect.Response[testdata.ProcessWellKnownTypesResponse], error)
+	ProcessWellKnownTypes(context.Context, *testdata.ProcessWellKnownTypesRequest) (*testdata.ProcessWellKnownTypesResponse, error)
 	// Test protovalidate constraints
-	TestValidation(context.Context, *connect.Request[testdata.TestValidationRequest]) (*connect.Response[testdata.TestValidationResponse], error)
+	TestValidation(context.Context, *testdata.TestValidationRequest) (*testdata.TestValidationResponse, error)
 }
 
-// NewTestServiceHandler builds an HTTP handler from the service implementation. It returns the path
-// on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewTestServiceHandler(svc TestServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	testServiceMethods := testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods()
-	testServiceCreateItemHandler := connect.NewUnaryHandler(
-		TestServiceCreateItemProcedure,
-		svc.CreateItem,
-		connect.WithSchema(testServiceMethods.ByName("CreateItem")),
-		connect.WithHandlerOptions(opts...),
+// RegisterTestServiceHandler registers svc as the testdata.TestService implementation on server.
+func RegisterTestServiceHandler(server *connect.Server, svc TestServiceHandler) {
+	adapter := testServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: testServiceCreateItemSpec(), Handler: adapter.createItem},
+		connect.Method{Spec: testServiceGetItemSpec(), Handler: adapter.getItem},
+		connect.Method{Spec: testServiceProcessWellKnownTypesSpec(), Handler: adapter.processWellKnownTypes},
+		connect.Method{Spec: testServiceTestValidationSpec(), Handler: adapter.testValidation},
 	)
-	testServiceGetItemHandler := connect.NewUnaryHandler(
-		TestServiceGetItemProcedure,
-		svc.GetItem,
-		connect.WithSchema(testServiceMethods.ByName("GetItem")),
-		connect.WithHandlerOptions(opts...),
-	)
-	testServiceProcessWellKnownTypesHandler := connect.NewUnaryHandler(
-		TestServiceProcessWellKnownTypesProcedure,
-		svc.ProcessWellKnownTypes,
-		connect.WithSchema(testServiceMethods.ByName("ProcessWellKnownTypes")),
-		connect.WithHandlerOptions(opts...),
-	)
-	testServiceTestValidationHandler := connect.NewUnaryHandler(
-		TestServiceTestValidationProcedure,
-		svc.TestValidation,
-		connect.WithSchema(testServiceMethods.ByName("TestValidation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/testdata.TestService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case TestServiceCreateItemProcedure:
-			testServiceCreateItemHandler.ServeHTTP(w, r)
-		case TestServiceGetItemProcedure:
-			testServiceGetItemHandler.ServeHTTP(w, r)
-		case TestServiceProcessWellKnownTypesProcedure:
-			testServiceProcessWellKnownTypesHandler.ServeHTTP(w, r)
-		case TestServiceTestValidationProcedure:
-			testServiceTestValidationHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedTestServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedTestServiceHandler struct{}
 
-func (UnimplementedTestServiceHandler) CreateItem(context.Context, *connect.Request[testdata.CreateItemRequest]) (*connect.Response[testdata.CreateItemResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.TestService.CreateItem is not implemented"))
+func (UnimplementedTestServiceHandler) CreateItem(context.Context, *testdata.CreateItemRequest) (*testdata.CreateItemResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.TestService.CreateItem is not implemented")
 }
 
-func (UnimplementedTestServiceHandler) GetItem(context.Context, *connect.Request[testdata.GetItemRequest]) (*connect.Response[testdata.GetItemResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.TestService.GetItem is not implemented"))
+func (UnimplementedTestServiceHandler) GetItem(context.Context, *testdata.GetItemRequest) (*testdata.GetItemResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.TestService.GetItem is not implemented")
 }
 
-func (UnimplementedTestServiceHandler) ProcessWellKnownTypes(context.Context, *connect.Request[testdata.ProcessWellKnownTypesRequest]) (*connect.Response[testdata.ProcessWellKnownTypesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.TestService.ProcessWellKnownTypes is not implemented"))
+func (UnimplementedTestServiceHandler) ProcessWellKnownTypes(context.Context, *testdata.ProcessWellKnownTypesRequest) (*testdata.ProcessWellKnownTypesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.TestService.ProcessWellKnownTypes is not implemented")
 }
 
-func (UnimplementedTestServiceHandler) TestValidation(context.Context, *connect.Request[testdata.TestValidationRequest]) (*connect.Response[testdata.TestValidationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.TestService.TestValidation is not implemented"))
+func (UnimplementedTestServiceHandler) TestValidation(context.Context, *testdata.TestValidationRequest) (*testdata.TestValidationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.TestService.TestValidation is not implemented")
+}
+
+type testServiceClient struct {
+	client *connect.Client
+}
+
+func (c *testServiceClient) CreateItem(ctx context.Context, req *testdata.CreateItemRequest) (*testdata.CreateItemResponse, error) {
+	var res testdata.CreateItemResponse
+	if err := c.client.CallUnary(ctx, testServiceCreateItemSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *testServiceClient) GetItem(ctx context.Context, req *testdata.GetItemRequest) (*testdata.GetItemResponse, error) {
+	var res testdata.GetItemResponse
+	if err := c.client.CallUnary(ctx, testServiceGetItemSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *testServiceClient) ProcessWellKnownTypes(ctx context.Context, req *testdata.ProcessWellKnownTypesRequest) (*testdata.ProcessWellKnownTypesResponse, error) {
+	var res testdata.ProcessWellKnownTypesResponse
+	if err := c.client.CallUnary(ctx, testServiceProcessWellKnownTypesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *testServiceClient) TestValidation(ctx context.Context, req *testdata.TestValidationRequest) (*testdata.TestValidationResponse, error) {
+	var res testdata.TestValidationResponse
+	if err := c.client.CallUnary(ctx, testServiceTestValidationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type testServiceHandler struct{ svc TestServiceHandler }
+
+func (h testServiceHandler) createItem(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.CreateItemRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.CreateItem(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h testServiceHandler) getItem(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.GetItemRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.GetItem(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h testServiceHandler) processWellKnownTypes(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.ProcessWellKnownTypesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ProcessWellKnownTypes(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h testServiceHandler) testValidation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.TestValidationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.TestValidation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

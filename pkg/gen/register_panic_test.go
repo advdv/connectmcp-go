@@ -6,10 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	mcpserver "github.com/mark3labs/mcp-go/server"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -35,8 +34,8 @@ func TestRegister_PanicOnNilNewMessage(t *testing.T) {
 		return nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: nilNewMessage,
 	})
 
@@ -87,8 +86,8 @@ func TestRegister_PanicOnNilArguments_WithExtraProperties(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	server := mcpserver.NewMCPServer("test", "1.0")
-	RegisterService(mark3labs.Wrap(server), sd, handler, RegisterServiceOptions{
+	server := mcptest.NewServer(t)
+	RegisterService(server, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		ExtraProperties: []runtime.ExtraProperty{
 			{

@@ -19,359 +19,411 @@
 package testdataconnect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// EdgeCaseServiceName is the fully-qualified name of the EdgeCaseService service.
 	EdgeCaseServiceName = "testdata.EdgeCaseService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// EdgeCaseServiceDeepNestingProcedure is the fully-qualified name of the EdgeCaseService's
-	// DeepNesting RPC.
+	// EdgeCaseServiceDeepNestingProcedure is the procedure name of the EdgeCaseService's DeepNesting
+	// RPC.
 	EdgeCaseServiceDeepNestingProcedure = "/testdata.EdgeCaseService/DeepNesting"
-	// EdgeCaseServiceAllScalarTypesProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceAllScalarTypesProcedure is the procedure name of the EdgeCaseService's
 	// AllScalarTypes RPC.
 	EdgeCaseServiceAllScalarTypesProcedure = "/testdata.EdgeCaseService/AllScalarTypes"
-	// EdgeCaseServiceRepeatedMessagesProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceRepeatedMessagesProcedure is the procedure name of the EdgeCaseService's
 	// RepeatedMessages RPC.
 	EdgeCaseServiceRepeatedMessagesProcedure = "/testdata.EdgeCaseService/RepeatedMessages"
-	// EdgeCaseServiceMapVariantsProcedure is the fully-qualified name of the EdgeCaseService's
-	// MapVariants RPC.
+	// EdgeCaseServiceMapVariantsProcedure is the procedure name of the EdgeCaseService's MapVariants
+	// RPC.
 	EdgeCaseServiceMapVariantsProcedure = "/testdata.EdgeCaseService/MapVariants"
-	// EdgeCaseServiceEnumFieldsProcedure is the fully-qualified name of the EdgeCaseService's
-	// EnumFields RPC.
+	// EdgeCaseServiceEnumFieldsProcedure is the procedure name of the EdgeCaseService's EnumFields RPC.
 	EdgeCaseServiceEnumFieldsProcedure = "/testdata.EdgeCaseService/EnumFields"
-	// EdgeCaseServiceMultipleOneofsProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceMultipleOneofsProcedure is the procedure name of the EdgeCaseService's
 	// MultipleOneofs RPC.
 	EdgeCaseServiceMultipleOneofsProcedure = "/testdata.EdgeCaseService/MultipleOneofs"
-	// EdgeCaseServiceNumericValidationProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceNumericValidationProcedure is the procedure name of the EdgeCaseService's
 	// NumericValidation RPC.
 	EdgeCaseServiceNumericValidationProcedure = "/testdata.EdgeCaseService/NumericValidation"
-	// EdgeCaseServiceRecursiveTreeProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceRecursiveTreeProcedure is the procedure name of the EdgeCaseService's
 	// RecursiveTree RPC.
 	EdgeCaseServiceRecursiveTreeProcedure = "/testdata.EdgeCaseService/RecursiveTree"
-	// EdgeCaseServiceOneofRecursiveProcedure is the fully-qualified name of the EdgeCaseService's
+	// EdgeCaseServiceOneofRecursiveProcedure is the procedure name of the EdgeCaseService's
 	// OneofRecursive RPC.
 	EdgeCaseServiceOneofRecursiveProcedure = "/testdata.EdgeCaseService/OneofRecursive"
+)
+
+var (
+	edgeCaseServiceDeepNestingSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("DeepNesting"),
+			Procedure:  EdgeCaseServiceDeepNestingProcedure,
+		}
+	})
+	edgeCaseServiceAllScalarTypesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("AllScalarTypes"),
+			Procedure:  EdgeCaseServiceAllScalarTypesProcedure,
+		}
+	})
+	edgeCaseServiceRepeatedMessagesSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("RepeatedMessages"),
+			Procedure:  EdgeCaseServiceRepeatedMessagesProcedure,
+		}
+	})
+	edgeCaseServiceMapVariantsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("MapVariants"),
+			Procedure:  EdgeCaseServiceMapVariantsProcedure,
+		}
+	})
+	edgeCaseServiceEnumFieldsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("EnumFields"),
+			Procedure:  EdgeCaseServiceEnumFieldsProcedure,
+		}
+	})
+	edgeCaseServiceMultipleOneofsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("MultipleOneofs"),
+			Procedure:  EdgeCaseServiceMultipleOneofsProcedure,
+		}
+	})
+	edgeCaseServiceNumericValidationSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("NumericValidation"),
+			Procedure:  EdgeCaseServiceNumericValidationProcedure,
+		}
+	})
+	edgeCaseServiceRecursiveTreeSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("RecursiveTree"),
+			Procedure:  EdgeCaseServiceRecursiveTreeProcedure,
+		}
+	})
+	edgeCaseServiceOneofRecursiveSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods().ByName("OneofRecursive"),
+			Procedure:  EdgeCaseServiceOneofRecursiveProcedure,
+		}
+	})
 )
 
 // EdgeCaseServiceClient is a client for the testdata.EdgeCaseService service.
 type EdgeCaseServiceClient interface {
 	// DeepNesting tests deeply nested messages with maps and WKTs
-	DeepNesting(context.Context, *connect.Request[testdata.DeepNestingRequest]) (*connect.Response[testdata.DeepNestingResponse], error)
+	DeepNesting(context.Context, *testdata.DeepNestingRequest) (*testdata.DeepNestingResponse, error)
 	// AllScalarTypes tests all protobuf scalar types
-	AllScalarTypes(context.Context, *connect.Request[testdata.AllScalarTypesRequest]) (*connect.Response[testdata.AllScalarTypesResponse], error)
+	AllScalarTypes(context.Context, *testdata.AllScalarTypesRequest) (*testdata.AllScalarTypesResponse, error)
 	// RepeatedMessages tests repeated message fields with inner maps/WKTs
-	RepeatedMessages(context.Context, *connect.Request[testdata.RepeatedMessagesRequest]) (*connect.Response[testdata.RepeatedMessagesResponse], error)
+	RepeatedMessages(context.Context, *testdata.RepeatedMessagesRequest) (*testdata.RepeatedMessagesResponse, error)
 	// MapVariants tests all map key/value type combinations
-	MapVariants(context.Context, *connect.Request[testdata.MapVariantsRequest]) (*connect.Response[testdata.MapVariantsResponse], error)
+	MapVariants(context.Context, *testdata.MapVariantsRequest) (*testdata.MapVariantsResponse, error)
 	// EnumFields tests enum handling
-	EnumFields(context.Context, *connect.Request[testdata.EnumFieldsRequest]) (*connect.Response[testdata.EnumFieldsResponse], error)
+	EnumFields(context.Context, *testdata.EnumFieldsRequest) (*testdata.EnumFieldsResponse, error)
 	// MultipleOneofs tests multiple oneof groups in a single message
-	MultipleOneofs(context.Context, *connect.Request[testdata.MultipleOneofsRequest]) (*connect.Response[testdata.MultipleOneofsResponse], error)
+	MultipleOneofs(context.Context, *testdata.MultipleOneofsRequest) (*testdata.MultipleOneofsResponse, error)
 	// NumericValidation tests all numeric validation constraint types
-	NumericValidation(context.Context, *connect.Request[testdata.NumericValidationRequest]) (*connect.Response[testdata.NumericValidationResponse], error)
+	NumericValidation(context.Context, *testdata.NumericValidationRequest) (*testdata.NumericValidationResponse, error)
 	// RecursiveTree tests self-referencing message schemas
-	RecursiveTree(context.Context, *connect.Request[testdata.RecursiveTreeRequest]) (*connect.Response[testdata.RecursiveTreeResponse], error)
+	RecursiveTree(context.Context, *testdata.RecursiveTreeRequest) (*testdata.RecursiveTreeResponse, error)
 	// OneofRecursive tests a recursive message nested inside a oneof, on both
 	// the request (decode) and response (encode) sides. It exercises the oneof
 	// discriminated-wrapper transform combined with recursion-depth placeholders.
-	OneofRecursive(context.Context, *connect.Request[testdata.OneofRecursiveRequest]) (*connect.Response[testdata.OneofRecursiveResponse], error)
+	OneofRecursive(context.Context, *testdata.OneofRecursiveRequest) (*testdata.OneofRecursiveResponse, error)
 }
 
-// NewEdgeCaseServiceClient constructs a client for the testdata.EdgeCaseService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewEdgeCaseServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) EdgeCaseServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	edgeCaseServiceMethods := testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods()
-	return &edgeCaseServiceClient{
-		deepNesting: connect.NewClient[testdata.DeepNestingRequest, testdata.DeepNestingResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceDeepNestingProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("DeepNesting")),
-			connect.WithClientOptions(opts...),
-		),
-		allScalarTypes: connect.NewClient[testdata.AllScalarTypesRequest, testdata.AllScalarTypesResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceAllScalarTypesProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("AllScalarTypes")),
-			connect.WithClientOptions(opts...),
-		),
-		repeatedMessages: connect.NewClient[testdata.RepeatedMessagesRequest, testdata.RepeatedMessagesResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceRepeatedMessagesProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("RepeatedMessages")),
-			connect.WithClientOptions(opts...),
-		),
-		mapVariants: connect.NewClient[testdata.MapVariantsRequest, testdata.MapVariantsResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceMapVariantsProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("MapVariants")),
-			connect.WithClientOptions(opts...),
-		),
-		enumFields: connect.NewClient[testdata.EnumFieldsRequest, testdata.EnumFieldsResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceEnumFieldsProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("EnumFields")),
-			connect.WithClientOptions(opts...),
-		),
-		multipleOneofs: connect.NewClient[testdata.MultipleOneofsRequest, testdata.MultipleOneofsResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceMultipleOneofsProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("MultipleOneofs")),
-			connect.WithClientOptions(opts...),
-		),
-		numericValidation: connect.NewClient[testdata.NumericValidationRequest, testdata.NumericValidationResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceNumericValidationProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("NumericValidation")),
-			connect.WithClientOptions(opts...),
-		),
-		recursiveTree: connect.NewClient[testdata.RecursiveTreeRequest, testdata.RecursiveTreeResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceRecursiveTreeProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("RecursiveTree")),
-			connect.WithClientOptions(opts...),
-		),
-		oneofRecursive: connect.NewClient[testdata.OneofRecursiveRequest, testdata.OneofRecursiveResponse](
-			httpClient,
-			baseURL+EdgeCaseServiceOneofRecursiveProcedure,
-			connect.WithSchema(edgeCaseServiceMethods.ByName("OneofRecursive")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// edgeCaseServiceClient implements EdgeCaseServiceClient.
-type edgeCaseServiceClient struct {
-	deepNesting       *connect.Client[testdata.DeepNestingRequest, testdata.DeepNestingResponse]
-	allScalarTypes    *connect.Client[testdata.AllScalarTypesRequest, testdata.AllScalarTypesResponse]
-	repeatedMessages  *connect.Client[testdata.RepeatedMessagesRequest, testdata.RepeatedMessagesResponse]
-	mapVariants       *connect.Client[testdata.MapVariantsRequest, testdata.MapVariantsResponse]
-	enumFields        *connect.Client[testdata.EnumFieldsRequest, testdata.EnumFieldsResponse]
-	multipleOneofs    *connect.Client[testdata.MultipleOneofsRequest, testdata.MultipleOneofsResponse]
-	numericValidation *connect.Client[testdata.NumericValidationRequest, testdata.NumericValidationResponse]
-	recursiveTree     *connect.Client[testdata.RecursiveTreeRequest, testdata.RecursiveTreeResponse]
-	oneofRecursive    *connect.Client[testdata.OneofRecursiveRequest, testdata.OneofRecursiveResponse]
-}
-
-// DeepNesting calls testdata.EdgeCaseService.DeepNesting.
-func (c *edgeCaseServiceClient) DeepNesting(ctx context.Context, req *connect.Request[testdata.DeepNestingRequest]) (*connect.Response[testdata.DeepNestingResponse], error) {
-	return c.deepNesting.CallUnary(ctx, req)
-}
-
-// AllScalarTypes calls testdata.EdgeCaseService.AllScalarTypes.
-func (c *edgeCaseServiceClient) AllScalarTypes(ctx context.Context, req *connect.Request[testdata.AllScalarTypesRequest]) (*connect.Response[testdata.AllScalarTypesResponse], error) {
-	return c.allScalarTypes.CallUnary(ctx, req)
-}
-
-// RepeatedMessages calls testdata.EdgeCaseService.RepeatedMessages.
-func (c *edgeCaseServiceClient) RepeatedMessages(ctx context.Context, req *connect.Request[testdata.RepeatedMessagesRequest]) (*connect.Response[testdata.RepeatedMessagesResponse], error) {
-	return c.repeatedMessages.CallUnary(ctx, req)
-}
-
-// MapVariants calls testdata.EdgeCaseService.MapVariants.
-func (c *edgeCaseServiceClient) MapVariants(ctx context.Context, req *connect.Request[testdata.MapVariantsRequest]) (*connect.Response[testdata.MapVariantsResponse], error) {
-	return c.mapVariants.CallUnary(ctx, req)
-}
-
-// EnumFields calls testdata.EdgeCaseService.EnumFields.
-func (c *edgeCaseServiceClient) EnumFields(ctx context.Context, req *connect.Request[testdata.EnumFieldsRequest]) (*connect.Response[testdata.EnumFieldsResponse], error) {
-	return c.enumFields.CallUnary(ctx, req)
-}
-
-// MultipleOneofs calls testdata.EdgeCaseService.MultipleOneofs.
-func (c *edgeCaseServiceClient) MultipleOneofs(ctx context.Context, req *connect.Request[testdata.MultipleOneofsRequest]) (*connect.Response[testdata.MultipleOneofsResponse], error) {
-	return c.multipleOneofs.CallUnary(ctx, req)
-}
-
-// NumericValidation calls testdata.EdgeCaseService.NumericValidation.
-func (c *edgeCaseServiceClient) NumericValidation(ctx context.Context, req *connect.Request[testdata.NumericValidationRequest]) (*connect.Response[testdata.NumericValidationResponse], error) {
-	return c.numericValidation.CallUnary(ctx, req)
-}
-
-// RecursiveTree calls testdata.EdgeCaseService.RecursiveTree.
-func (c *edgeCaseServiceClient) RecursiveTree(ctx context.Context, req *connect.Request[testdata.RecursiveTreeRequest]) (*connect.Response[testdata.RecursiveTreeResponse], error) {
-	return c.recursiveTree.CallUnary(ctx, req)
-}
-
-// OneofRecursive calls testdata.EdgeCaseService.OneofRecursive.
-func (c *edgeCaseServiceClient) OneofRecursive(ctx context.Context, req *connect.Request[testdata.OneofRecursiveRequest]) (*connect.Response[testdata.OneofRecursiveResponse], error) {
-	return c.oneofRecursive.CallUnary(ctx, req)
+// NewEdgeCaseServiceClient constructs a client for the testdata.EdgeCaseService service. Multiple
+// service clients may share a single connect.Client.
+func NewEdgeCaseServiceClient(client *connect.Client) EdgeCaseServiceClient {
+	return &edgeCaseServiceClient{client: client}
 }
 
 // EdgeCaseServiceHandler is an implementation of the testdata.EdgeCaseService service.
 type EdgeCaseServiceHandler interface {
 	// DeepNesting tests deeply nested messages with maps and WKTs
-	DeepNesting(context.Context, *connect.Request[testdata.DeepNestingRequest]) (*connect.Response[testdata.DeepNestingResponse], error)
+	DeepNesting(context.Context, *testdata.DeepNestingRequest) (*testdata.DeepNestingResponse, error)
 	// AllScalarTypes tests all protobuf scalar types
-	AllScalarTypes(context.Context, *connect.Request[testdata.AllScalarTypesRequest]) (*connect.Response[testdata.AllScalarTypesResponse], error)
+	AllScalarTypes(context.Context, *testdata.AllScalarTypesRequest) (*testdata.AllScalarTypesResponse, error)
 	// RepeatedMessages tests repeated message fields with inner maps/WKTs
-	RepeatedMessages(context.Context, *connect.Request[testdata.RepeatedMessagesRequest]) (*connect.Response[testdata.RepeatedMessagesResponse], error)
+	RepeatedMessages(context.Context, *testdata.RepeatedMessagesRequest) (*testdata.RepeatedMessagesResponse, error)
 	// MapVariants tests all map key/value type combinations
-	MapVariants(context.Context, *connect.Request[testdata.MapVariantsRequest]) (*connect.Response[testdata.MapVariantsResponse], error)
+	MapVariants(context.Context, *testdata.MapVariantsRequest) (*testdata.MapVariantsResponse, error)
 	// EnumFields tests enum handling
-	EnumFields(context.Context, *connect.Request[testdata.EnumFieldsRequest]) (*connect.Response[testdata.EnumFieldsResponse], error)
+	EnumFields(context.Context, *testdata.EnumFieldsRequest) (*testdata.EnumFieldsResponse, error)
 	// MultipleOneofs tests multiple oneof groups in a single message
-	MultipleOneofs(context.Context, *connect.Request[testdata.MultipleOneofsRequest]) (*connect.Response[testdata.MultipleOneofsResponse], error)
+	MultipleOneofs(context.Context, *testdata.MultipleOneofsRequest) (*testdata.MultipleOneofsResponse, error)
 	// NumericValidation tests all numeric validation constraint types
-	NumericValidation(context.Context, *connect.Request[testdata.NumericValidationRequest]) (*connect.Response[testdata.NumericValidationResponse], error)
+	NumericValidation(context.Context, *testdata.NumericValidationRequest) (*testdata.NumericValidationResponse, error)
 	// RecursiveTree tests self-referencing message schemas
-	RecursiveTree(context.Context, *connect.Request[testdata.RecursiveTreeRequest]) (*connect.Response[testdata.RecursiveTreeResponse], error)
+	RecursiveTree(context.Context, *testdata.RecursiveTreeRequest) (*testdata.RecursiveTreeResponse, error)
 	// OneofRecursive tests a recursive message nested inside a oneof, on both
 	// the request (decode) and response (encode) sides. It exercises the oneof
 	// discriminated-wrapper transform combined with recursion-depth placeholders.
-	OneofRecursive(context.Context, *connect.Request[testdata.OneofRecursiveRequest]) (*connect.Response[testdata.OneofRecursiveResponse], error)
+	OneofRecursive(context.Context, *testdata.OneofRecursiveRequest) (*testdata.OneofRecursiveResponse, error)
 }
 
-// NewEdgeCaseServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewEdgeCaseServiceHandler(svc EdgeCaseServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	edgeCaseServiceMethods := testdata.File_testdata_edge_cases_proto.Services().ByName("EdgeCaseService").Methods()
-	edgeCaseServiceDeepNestingHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceDeepNestingProcedure,
-		svc.DeepNesting,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("DeepNesting")),
-		connect.WithHandlerOptions(opts...),
+// RegisterEdgeCaseServiceHandler registers svc as the testdata.EdgeCaseService implementation on
+// server.
+func RegisterEdgeCaseServiceHandler(server *connect.Server, svc EdgeCaseServiceHandler) {
+	adapter := edgeCaseServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: edgeCaseServiceDeepNestingSpec(), Handler: adapter.deepNesting},
+		connect.Method{Spec: edgeCaseServiceAllScalarTypesSpec(), Handler: adapter.allScalarTypes},
+		connect.Method{Spec: edgeCaseServiceRepeatedMessagesSpec(), Handler: adapter.repeatedMessages},
+		connect.Method{Spec: edgeCaseServiceMapVariantsSpec(), Handler: adapter.mapVariants},
+		connect.Method{Spec: edgeCaseServiceEnumFieldsSpec(), Handler: adapter.enumFields},
+		connect.Method{Spec: edgeCaseServiceMultipleOneofsSpec(), Handler: adapter.multipleOneofs},
+		connect.Method{Spec: edgeCaseServiceNumericValidationSpec(), Handler: adapter.numericValidation},
+		connect.Method{Spec: edgeCaseServiceRecursiveTreeSpec(), Handler: adapter.recursiveTree},
+		connect.Method{Spec: edgeCaseServiceOneofRecursiveSpec(), Handler: adapter.oneofRecursive},
 	)
-	edgeCaseServiceAllScalarTypesHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceAllScalarTypesProcedure,
-		svc.AllScalarTypes,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("AllScalarTypes")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceRepeatedMessagesHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceRepeatedMessagesProcedure,
-		svc.RepeatedMessages,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("RepeatedMessages")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceMapVariantsHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceMapVariantsProcedure,
-		svc.MapVariants,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("MapVariants")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceEnumFieldsHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceEnumFieldsProcedure,
-		svc.EnumFields,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("EnumFields")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceMultipleOneofsHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceMultipleOneofsProcedure,
-		svc.MultipleOneofs,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("MultipleOneofs")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceNumericValidationHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceNumericValidationProcedure,
-		svc.NumericValidation,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("NumericValidation")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceRecursiveTreeHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceRecursiveTreeProcedure,
-		svc.RecursiveTree,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("RecursiveTree")),
-		connect.WithHandlerOptions(opts...),
-	)
-	edgeCaseServiceOneofRecursiveHandler := connect.NewUnaryHandler(
-		EdgeCaseServiceOneofRecursiveProcedure,
-		svc.OneofRecursive,
-		connect.WithSchema(edgeCaseServiceMethods.ByName("OneofRecursive")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/testdata.EdgeCaseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case EdgeCaseServiceDeepNestingProcedure:
-			edgeCaseServiceDeepNestingHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceAllScalarTypesProcedure:
-			edgeCaseServiceAllScalarTypesHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceRepeatedMessagesProcedure:
-			edgeCaseServiceRepeatedMessagesHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceMapVariantsProcedure:
-			edgeCaseServiceMapVariantsHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceEnumFieldsProcedure:
-			edgeCaseServiceEnumFieldsHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceMultipleOneofsProcedure:
-			edgeCaseServiceMultipleOneofsHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceNumericValidationProcedure:
-			edgeCaseServiceNumericValidationHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceRecursiveTreeProcedure:
-			edgeCaseServiceRecursiveTreeHandler.ServeHTTP(w, r)
-		case EdgeCaseServiceOneofRecursiveProcedure:
-			edgeCaseServiceOneofRecursiveHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedEdgeCaseServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedEdgeCaseServiceHandler struct{}
 
-func (UnimplementedEdgeCaseServiceHandler) DeepNesting(context.Context, *connect.Request[testdata.DeepNestingRequest]) (*connect.Response[testdata.DeepNestingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.DeepNesting is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) DeepNesting(context.Context, *testdata.DeepNestingRequest) (*testdata.DeepNestingResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.DeepNesting is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) AllScalarTypes(context.Context, *connect.Request[testdata.AllScalarTypesRequest]) (*connect.Response[testdata.AllScalarTypesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.AllScalarTypes is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) AllScalarTypes(context.Context, *testdata.AllScalarTypesRequest) (*testdata.AllScalarTypesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.AllScalarTypes is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) RepeatedMessages(context.Context, *connect.Request[testdata.RepeatedMessagesRequest]) (*connect.Response[testdata.RepeatedMessagesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.RepeatedMessages is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) RepeatedMessages(context.Context, *testdata.RepeatedMessagesRequest) (*testdata.RepeatedMessagesResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.RepeatedMessages is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) MapVariants(context.Context, *connect.Request[testdata.MapVariantsRequest]) (*connect.Response[testdata.MapVariantsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.MapVariants is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) MapVariants(context.Context, *testdata.MapVariantsRequest) (*testdata.MapVariantsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.MapVariants is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) EnumFields(context.Context, *connect.Request[testdata.EnumFieldsRequest]) (*connect.Response[testdata.EnumFieldsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.EnumFields is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) EnumFields(context.Context, *testdata.EnumFieldsRequest) (*testdata.EnumFieldsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.EnumFields is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) MultipleOneofs(context.Context, *connect.Request[testdata.MultipleOneofsRequest]) (*connect.Response[testdata.MultipleOneofsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.MultipleOneofs is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) MultipleOneofs(context.Context, *testdata.MultipleOneofsRequest) (*testdata.MultipleOneofsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.MultipleOneofs is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) NumericValidation(context.Context, *connect.Request[testdata.NumericValidationRequest]) (*connect.Response[testdata.NumericValidationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.NumericValidation is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) NumericValidation(context.Context, *testdata.NumericValidationRequest) (*testdata.NumericValidationResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.NumericValidation is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) RecursiveTree(context.Context, *connect.Request[testdata.RecursiveTreeRequest]) (*connect.Response[testdata.RecursiveTreeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.RecursiveTree is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) RecursiveTree(context.Context, *testdata.RecursiveTreeRequest) (*testdata.RecursiveTreeResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.RecursiveTree is not implemented")
 }
 
-func (UnimplementedEdgeCaseServiceHandler) OneofRecursive(context.Context, *connect.Request[testdata.OneofRecursiveRequest]) (*connect.Response[testdata.OneofRecursiveResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("testdata.EdgeCaseService.OneofRecursive is not implemented"))
+func (UnimplementedEdgeCaseServiceHandler) OneofRecursive(context.Context, *testdata.OneofRecursiveRequest) (*testdata.OneofRecursiveResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "testdata.EdgeCaseService.OneofRecursive is not implemented")
+}
+
+type edgeCaseServiceClient struct {
+	client *connect.Client
+}
+
+func (c *edgeCaseServiceClient) DeepNesting(ctx context.Context, req *testdata.DeepNestingRequest) (*testdata.DeepNestingResponse, error) {
+	var res testdata.DeepNestingResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceDeepNestingSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) AllScalarTypes(ctx context.Context, req *testdata.AllScalarTypesRequest) (*testdata.AllScalarTypesResponse, error) {
+	var res testdata.AllScalarTypesResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceAllScalarTypesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) RepeatedMessages(ctx context.Context, req *testdata.RepeatedMessagesRequest) (*testdata.RepeatedMessagesResponse, error) {
+	var res testdata.RepeatedMessagesResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceRepeatedMessagesSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) MapVariants(ctx context.Context, req *testdata.MapVariantsRequest) (*testdata.MapVariantsResponse, error) {
+	var res testdata.MapVariantsResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceMapVariantsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) EnumFields(ctx context.Context, req *testdata.EnumFieldsRequest) (*testdata.EnumFieldsResponse, error) {
+	var res testdata.EnumFieldsResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceEnumFieldsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) MultipleOneofs(ctx context.Context, req *testdata.MultipleOneofsRequest) (*testdata.MultipleOneofsResponse, error) {
+	var res testdata.MultipleOneofsResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceMultipleOneofsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) NumericValidation(ctx context.Context, req *testdata.NumericValidationRequest) (*testdata.NumericValidationResponse, error) {
+	var res testdata.NumericValidationResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceNumericValidationSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) RecursiveTree(ctx context.Context, req *testdata.RecursiveTreeRequest) (*testdata.RecursiveTreeResponse, error) {
+	var res testdata.RecursiveTreeResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceRecursiveTreeSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *edgeCaseServiceClient) OneofRecursive(ctx context.Context, req *testdata.OneofRecursiveRequest) (*testdata.OneofRecursiveResponse, error) {
+	var res testdata.OneofRecursiveResponse
+	if err := c.client.CallUnary(ctx, edgeCaseServiceOneofRecursiveSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type edgeCaseServiceHandler struct{ svc EdgeCaseServiceHandler }
+
+func (h edgeCaseServiceHandler) deepNesting(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.DeepNestingRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.DeepNesting(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) allScalarTypes(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.AllScalarTypesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.AllScalarTypes(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) repeatedMessages(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.RepeatedMessagesRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RepeatedMessages(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) mapVariants(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.MapVariantsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.MapVariants(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) enumFields(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.EnumFieldsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.EnumFields(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) multipleOneofs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.MultipleOneofsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.MultipleOneofs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) numericValidation(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.NumericValidationRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.NumericValidation(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) recursiveTree(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.RecursiveTreeRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RecursiveTree(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h edgeCaseServiceHandler) oneofRecursive(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req testdata.OneofRecursiveRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.OneofRecursive(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

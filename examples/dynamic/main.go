@@ -23,18 +23,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func main() {
-	raw, s := mark3labs.NewServer(
+	raw, s := gosdk.NewServer(
 		"Dynamic MCP server - no codegen needed",
 		"1.0.0",
 	)
@@ -52,10 +53,12 @@ func main() {
 		//   NewMessage: func(md protoreflect.MessageDescriptor) proto.Message { ... },
 	})
 
-	fmt.Printf("Registered %d tools from %s\n", sd.Methods().Len(), sd.FullName())
+	// stdout carries the MCP protocol, so diagnostics go to stderr.
+	fmt.Fprintf(os.Stderr, "Registered %d tools from %s\n", sd.Methods().Len(), sd.FullName())
 
-	if err := server.ServeStdio(raw); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if err := raw.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
+		os.Exit(1)
 	}
 }
 
@@ -63,9 +66,9 @@ func main() {
 // (either a concrete type or a dynamicpb.Message depending on NewMessage).
 func handler(ctx context.Context, method protoreflect.MethodDescriptor, req proto.Message) (proto.Message, error) {
 	reqJSON, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(req)
-	fmt.Printf("Tool called: %s\nRequest: %s\n", method.FullName(), string(reqJSON))
+	fmt.Fprintf(os.Stderr, "Tool called: %s\nRequest: %s\n", method.FullName(), string(reqJSON))
 
-	// In a real proxy, you'd forward to the upstream gRPC/Connect server here.
+	// In a real proxy, you'd forward to the upstream connect server here.
 	// For this example, return a default response.
 	return gen.DynamicNewMessage(method.Output()), nil
 }

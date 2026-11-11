@@ -15,56 +15,75 @@
 package runtime
 
 import (
+	"encoding/json"
 	"errors"
+	"strings"
 
-	"connectrpc.com/connect"
-	apierrors "github.com/redpanda-data/common-go/api/errors"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// HandleError converts a gRPC/Connect error into a structured MCP tool result.
-// It extracts error codes, messages, and detailed error information using common-go utilities.
+// toolError is the JSON shape of a failed RPC as shown to the model.
+type toolError struct {
+	// Code is the canonical RPC code name, e.g. "INVALID_ARGUMENT".
+	Code    string            `json:"code"`
+	Message string            `json:"message,omitempty"`
+	Details []json.RawMessage `json:"details,omitempty"`
+}
+
+// HandleError converts an RPC error into a structured MCP tool error result:
+// a JSON object with the error "code", "message" and, for connect errors
+// carrying them, "details" (each rendered as protojson with an "@type").
+//
+// A connect error anywhere in err's chain supplies the code and details;
+// any other error is reported with code UNKNOWN.
 func HandleError(err error) (*CallToolResult, error) {
 	if err == nil {
 		return nil, nil
 	}
 
-	// Convert to google.rpc.Status regardless of source
-	var statusProto *spb.Status
+	out := toolError{
+		Code:    codeName(connect.CodeUnknown),
+		Message: err.Error(),
+	}
 
-	// Try to extract gRPC status first
-	if st, ok := status.FromError(err); ok {
-		statusProto = st.Proto()
-	} else if connectErr := new(connect.Error); errors.As(err, &connectErr) {
-		// Handle Connect RPC errors using ConnectErrorToGoogleStatus
-		statusProto = apierrors.ConnectErrorToGoogleStatus(connectErr)
-		// Preserve wrapper context: if the error was wrapped (e.g., fmt.Errorf),
-		// the outer message is lost by ConnectErrorToGoogleStatus which only sees
-		// the inner connect.Error. Use the full error chain message instead.
-		if fullMsg := err.Error(); fullMsg != connectErr.Error() {
-			statusProto.Message = fullMsg
+	if cerr, ok := errors.AsType[*connect.Error](err); ok && cerr != nil {
+		out.Code = codeName(cerr.Code())
+		// Keep context added by wrapping (fmt.Errorf("...: %w", cerr)); a bare
+		// connect error reports just its message, without the code prefix.
+		if err.Error() == cerr.Error() {
+			out.Message = cerr.Message()
 		}
-	} else {
-		// Create a basic status for generic errors
-		statusProto = &spb.Status{
-			Code:    int32(codes.Unknown),
-			Message: err.Error(),
-			Details: nil,
+		for _, detail := range cerr.Details() {
+			out.Details = append(out.Details, detailJSON(detail))
 		}
 	}
 
-	// Use StatusToNice to convert to the common-go ErrorStatus format
-	niceStatus := apierrors.StatusToNice(statusProto)
-
-	// Marshal the niceStatus directly to JSON using protojson
-	finalJSON, marshalErr := protojson.Marshal(niceStatus)
+	b, marshalErr := json.Marshal(out)
 	if marshalErr != nil {
-		// Fallback to simple error message if JSON marshaling fails
 		return NewToolResultError("Error: " + err.Error()), nil
 	}
+	return NewToolResultError(string(b)), nil
+}
 
-	return NewToolResultError(string(finalJSON)), nil
+// codeName renders a connect code in its canonical upper-case form
+// ("not_found" -> "NOT_FOUND").
+func codeName(code connect.Code) string {
+	return strings.ToUpper(code.String())
+}
+
+// detailJSON renders an error detail as protojson. Details whose message type
+// is not linked into the binary cannot be decoded and are passed through with
+// their raw (base64) value instead.
+func detailJSON(detail *connect.ErrorDetail) json.RawMessage {
+	packed := connectproto.ErrorDetailToAny(detail)
+	if b, err := protojson.Marshal(packed); err == nil {
+		return b
+	}
+	b, _ := json.Marshal(struct {
+		Type  string `json:"@type"`
+		Value []byte `json:"value"`
+	}{packed.GetTypeUrl(), packed.GetValue()})
+	return b
 }

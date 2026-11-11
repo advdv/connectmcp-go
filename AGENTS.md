@@ -1,6 +1,6 @@
 # protoc-gen-go-mcp
 
-Protoc plugin + runtime library for generating MCP (Model Context Protocol) server handlers from gRPC service definitions.
+Protoc plugin + runtime library for generating MCP (Model Context Protocol) server handlers from protobuf service definitions, targeting connect-go v2 (`connectrpc.com/connect/v2`).
 
 ## Build & Test
 
@@ -25,11 +25,11 @@ pkg/gen/                    Core library (THE important package):
   schema.go                 JSON schema generation from protoreflect descriptors
   register.go               Dynamic MCP tool registration at runtime
 pkg/generator/              Protoc plugin: Go template output, delegates to pkg/gen
-pkg/runtime/                MCPServer interface, FixOpenAI, error handling, extra properties
+pkg/runtime/                MCPServer interface, FixOpenAI, error handling (connect v2 errors), extra properties
   server.go                 MCPServer interface + Tool/CallToolRequest/CallToolResult types
-  mark3labs/                Adapter: mark3labs/mcp-go -> runtime.MCPServer
   gosdk/                    Adapter: modelcontextprotocol/go-sdk -> runtime.MCPServer
 pkg/testdata/               Proto files + generated code for testing
+internal/mcptest/           In-memory go-sdk MCP server for tests, driven by raw JSON-RPC messages
 conformancetest/            E2E tests against real LLM providers (Gemini, OpenAI, Anthropic)
 ```
 
@@ -40,21 +40,18 @@ conformancetest/            E2E tests against real LLM providers (Gemini, OpenAI
 
 ## Key APIs
 
-### Creating an MCP server (pick your library)
+### Creating an MCP server
 ```go
 // Official go-sdk
 raw, s := gosdk.NewServer("name", "1.0")    // s is runtime.MCPServer
 raw.Run(ctx, &mcp.StdioTransport{})
-
-// mark3labs/mcp-go
-raw, s := mark3labs.NewServer("name", "1.0") // s is runtime.MCPServer
-server.ServeStdio(raw)
 ```
 
 ### Static registration (from generated code)
 ```go
-testdatamcp.RegisterTestServiceHandler(s, myServiceImpl)
-testdatamcp.RegisterTestServiceHandlerOpenAI(s, myServiceImpl)
+// srv is anything with the plain unary signatures: a service implementation,
+// a connect-go v2 handler, or a connect-go v2 client (remote or in-process).
+testdatamcp.RegisterTestServiceHandler(s, srv)
 ```
 
 ### Dynamic registration (runtime, no codegen)
@@ -79,7 +76,11 @@ standard, openAI := gen.ToolForMethod(methodDescriptor, "description")
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
 - `pkg/gen` is fully independent of protoc - works with any protoreflect descriptor
 - Generated code and runtime are MCP-library-agnostic via runtime.MCPServer interface
-- Adapter packages (runtime/mark3labs, runtime/gosdk) bridge to concrete MCP libraries
+- The adapter package runtime/gosdk bridges to the official MCP go-sdk
+- Connect-only, no gRPC: connect-go v2 handlers and clients share one plain unary signature, so the
+  generated code has a single `<Service>Server` interface + `Register<Service>Handler` and imports
+  neither connect nor grpc. Forwarding to a client is just registering that client.
+- `runtime.HandleError` maps `*connect.Error` (code, message, details) to a JSON tool error; other errors are `UNKNOWN`
 - Golden test re-runs generator in-process from compiled descriptors, no shell/buf at test time
 
 ## Testing
@@ -88,6 +89,7 @@ standard, openAI := gen.ToolForMethod(methodDescriptor, "description")
 - Conformance tests: `go test ./conformancetest/` (needs API keys, tests skip if missing)
 - Golden test: in-process generator re-run vs checked-in `gen/go/*.pb.mcp.go`
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`
+- Connect v2 E2E (in-process + HTTP transports): `pkg/generator/connect_e2e_test.go`
 - Fuzz tests: `pkg/runtime/fix_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`
 
 ## Proto Generation

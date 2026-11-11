@@ -11,6 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/testdata/gen/go/testdata",
-        "@com_connectrpc_connect//:connect",
+        "@com_connectrpc_connect_v2//:connect",
     ],
 )

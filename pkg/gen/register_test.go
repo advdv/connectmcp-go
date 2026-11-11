@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/proto"
@@ -137,7 +137,8 @@ func TestRegisterService_Standard(t *testing.T) {
 		}
 	}
 
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	RegisterService(adapter, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
@@ -181,7 +182,8 @@ func TestRegisterService_OpenAI(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	RegisterService(adapter, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 	})
@@ -217,7 +219,8 @@ func TestRegisterService_WithExtraProperties(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	RegisterService(adapter, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		ExtraProperties: []runtime.ExtraProperty{
@@ -253,7 +256,8 @@ func TestRegisterService_ToolList(t *testing.T) {
 		return newTestMessage(method.Output()), nil
 	}
 
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	RegisterService(adapter, sd, handler, RegisterServiceOptions{
 		NewMessage: newTestMessage,
 		CommentProvider: func(method protoreflect.MethodDescriptor) string {
@@ -342,7 +346,8 @@ func TestRegisterService_ZeroConfigDynamicPB(t *testing.T) {
 	}
 
 	// Zero-config: no NewMessage provided, should default to DynamicNewMessage
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 	RegisterService(adapter, sd, handler, RegisterServiceOptions{
 		// NewMessage intentionally omitted - should default to dynamicpb
 	})

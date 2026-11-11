@@ -7,9 +7,9 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/gen",
-        "//pkg/runtime/mark3labs",
+        "//pkg/runtime/gosdk",
         "//pkg/testdata/gen/go/testdata",
-        "@com_github_mark3labs_mcp_go//server",
+        "@com_github_modelcontextprotocol_go_sdk//mcp",
         "@org_golang_google_protobuf//encoding/protojson",
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//reflect/protoreflect",

@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mcptest",
+    srcs = ["mcptest.go"],
+    importpath = "github.com/advdv/protoc-gen-go-mcp/internal/mcptest",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//pkg/runtime",
+        "//pkg/runtime/gosdk",
+        "@com_github_modelcontextprotocol_go_sdk//mcp",
+    ],
+)

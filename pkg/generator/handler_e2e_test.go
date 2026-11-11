@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	"github.com/advdv/protoc-gen-go-mcp/internal/mcptest"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	. "github.com/onsi/gomega"
@@ -39,7 +39,8 @@ func (s *fullTestServer) TestValidation(_ context.Context, _ *testdata.TestValid
 func TestGeneratedHandlerE2E(t *testing.T) {
 	g := NewWithT(t)
 	srv := &fullTestServer{}
-	raw, adapter := mark3labs.NewServer("test", "1.0")
+	raw := mcptest.NewServer(t)
+	adapter := raw
 
 	testdatamcp.RegisterTestServiceHandler(adapter, srv)
 
