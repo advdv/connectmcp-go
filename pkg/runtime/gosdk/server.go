@@ -50,10 +50,10 @@ func (w *server) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
 		Name:        tool.Name,
 		Description: tool.Description,
 		// InputSchema/OutputSchema accept any JSON-marshalable value; json.RawMessage works.
-		InputSchema: json.RawMessage(tool.RawInputSchema),
+		InputSchema: tool.RawInputSchema,
 	}
 	if len(tool.RawOutputSchema) > 0 {
-		mcpTool.OutputSchema = json.RawMessage(tool.RawOutputSchema)
+		mcpTool.OutputSchema = tool.RawOutputSchema
 	}
 
 	w.s.AddTool(mcpTool, func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {

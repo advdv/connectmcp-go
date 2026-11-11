@@ -139,10 +139,11 @@ func TestHandleError_WrappedConnectErrorMessagePreservation(t *testing.T) {
 	//   "important context about the failure: internal: db timeout"
 	// but resp["message"] will just be "db timeout".
 	fullMessage := wrapped.Error()
-	if resp["message"] == fullMessage {
+	switch resp["message"] {
+	case fullMessage:
 		// If this passes, the wrapper context IS preserved (unexpected)
 		t.Log("wrapper context preserved (good)")
-	} else if resp["message"] == "db timeout" {
+	case "db timeout":
 		// Wrapper context is lost - this is the likely behavior and a real
 		// information loss bug
 		t.Errorf("wrapper context lost: HandleError discards wrapping message.\n"+
@@ -150,7 +151,7 @@ func TestHandleError_WrappedConnectErrorMessagePreservation(t *testing.T) {
 			"  full error:   %q\n"+
 			"  This means callers who add context via fmt.Errorf will have "+
 			"that context silently dropped.", resp["message"], fullMessage)
-	} else {
+	default:
 		t.Errorf("unexpected message: got %q", resp["message"])
 	}
 }

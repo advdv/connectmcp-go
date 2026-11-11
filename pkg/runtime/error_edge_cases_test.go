@@ -19,7 +19,7 @@ func TestHandleError_AllGRPCCodes(t *testing.T) {
 		code     codes.Code
 		expected string
 	}{
-		{codes.Canceled, "CANCELLED"},
+		{codes.Canceled, "CANCELLED"}, //nolint:misspell // gRPC code name
 		{codes.Unknown, "UNKNOWN"},
 		{codes.InvalidArgument, "INVALID_ARGUMENT"},
 		{codes.DeadlineExceeded, "DEADLINE_EXCEEDED"},
@@ -60,7 +60,7 @@ func TestHandleError_ConnectErrorCodes(t *testing.T) {
 		code     connect.Code
 		expected string
 	}{
-		{connect.CodeCanceled, "CANCELLED"},
+		{connect.CodeCanceled, "CANCELLED"}, //nolint:misspell // gRPC code name
 		{connect.CodeNotFound, "NOT_FOUND"},
 		{connect.CodeAlreadyExists, "ALREADY_EXISTS"},
 		{connect.CodePermissionDenied, "PERMISSION_DENIED"},

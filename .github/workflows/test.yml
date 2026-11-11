@@ -7,6 +7,20 @@ on:
     branches: [ main ]
 
 jobs:
+  lint:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up tools (versions from mise.toml)
+      uses: jdx/mise-action@v3
+      with:
+        install_args: go golangci-lint
+
+    - name: Lint
+      run: golangci-lint run --max-issues-per-linter 0 --max-same-issues 0
+
   build:
     runs-on: blacksmith-2vcpu-ubuntu-2404
 

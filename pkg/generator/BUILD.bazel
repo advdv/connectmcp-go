@@ -19,7 +19,6 @@ go_test(
     size = "small",
     srcs = [
         "compatibility_test.go",
-        "edge_cases_test.go",
         "extra_properties_integration_test.go",
         "generator_test.go",
         "golden_test.go",

@@ -66,7 +66,7 @@ func TestGoldenGeneration(t *testing.T) {
 	filesByPath := map[string]*descriptorpb.FileDescriptorProto{}
 	var collectDeps func(protoreflect.FileDescriptor)
 	collectDeps = func(fd protoreflect.FileDescriptor) {
-		p := string(fd.Path())
+		p := fd.Path()
 		if _, ok := filesByPath[p]; ok {
 			return
 		}

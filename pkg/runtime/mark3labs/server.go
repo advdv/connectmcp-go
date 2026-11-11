@@ -18,7 +18,6 @@ package mark3labs
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -47,8 +46,8 @@ func (w *server) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
 	mcpTool := mcp.Tool{
 		Name:            tool.Name,
 		Description:     tool.Description,
-		RawInputSchema:  json.RawMessage(tool.RawInputSchema),
-		RawOutputSchema: json.RawMessage(tool.RawOutputSchema),
+		RawInputSchema:  tool.RawInputSchema,
+		RawOutputSchema: tool.RawOutputSchema,
 	}
 	w.s.AddTool(mcpTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		result, err := handler(ctx, &runtime.CallToolRequest{
