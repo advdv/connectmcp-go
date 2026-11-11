@@ -19,9 +19,9 @@ package mark3labs
 import (
 	"context"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
 )
 
 type server struct {

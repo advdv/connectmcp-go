@@ -17,7 +17,7 @@ package runtime_test
 import (
 	"testing"
 
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

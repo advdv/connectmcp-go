@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"

@@ -25,12 +25,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	. "github.com/onsi/gomega"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/gosdk"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/mark3labs"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	testdatamcp "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/modelcontextprotocol/go-sdk/mcp"

@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	mcpv1 "github.com/redpanda-data/protoc-gen-go-mcp/pkg/mcpv1"
+	mcpv1 "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
 )
 
 // validToolName is lowercase snake/kebab case within every LLM

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -57,7 +57,7 @@ import (
   "encoding/json"
   "connectrpc.com/connect"
   grpc "google.golang.org/grpc"
-  "github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+  "github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 )
 
 

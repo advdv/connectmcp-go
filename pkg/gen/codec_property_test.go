@@ -20,10 +20,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"github.com/google/go-cmp/cmp"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"

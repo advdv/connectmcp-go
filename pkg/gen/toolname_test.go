@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	mcpv1 "github.com/redpanda-data/protoc-gen-go-mcp/pkg/mcpv1"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	mcpv1 "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 )
 
 // methodSpec describes one method of a test service; a non-nil

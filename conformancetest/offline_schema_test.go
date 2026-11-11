@@ -27,11 +27,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"github.com/redpanda-data/ai-sdk-go/providers/anthropic"
 	"github.com/redpanda-data/ai-sdk-go/providers/google"
 	"github.com/redpanda-data/ai-sdk-go/providers/openai"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )

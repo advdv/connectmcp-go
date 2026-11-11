@@ -1896,8 +1896,8 @@ const file_testdata_edge_cases_proto_rawDesc = "" +
 	"\x0eMultipleOneofs\x12\x1f.testdata.MultipleOneofsRequest\x1a .testdata.MultipleOneofsResponse\x12\\\n" +
 	"\x11NumericValidation\x12\".testdata.NumericValidationRequest\x1a#.testdata.NumericValidationResponse\x12P\n" +
 	"\rRecursiveTree\x12\x1e.testdata.RecursiveTreeRequest\x1a\x1f.testdata.RecursiveTreeResponse\x12S\n" +
-	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponseB\xa7\x01\n" +
-	"\fcom.testdataB\x0eEdgeCasesProtoP\x01ZGgithub.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
+	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponseB\x9f\x01\n" +
+	"\fcom.testdataB\x0eEdgeCasesProtoP\x01Z?github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
 
 var (
 	file_testdata_edge_cases_proto_rawDescOnce sync.Once

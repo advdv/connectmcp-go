@@ -4,7 +4,7 @@
 package testdatamcp
 
 import (
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 )
 
 import (
@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"connectrpc.com/connect"
 	grpc "google.golang.org/grpc"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 )
 
 var (

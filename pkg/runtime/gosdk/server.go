@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
 )
 
 type server struct {

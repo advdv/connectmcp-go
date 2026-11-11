@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	. "github.com/onsi/gomega"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
 )
 
 // TestToolLiteralRoundTrip parses the emitted literal as Go source and checks

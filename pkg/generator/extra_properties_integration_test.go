@@ -19,10 +19,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/mark3labs"
+	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	. "github.com/onsi/gomega"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime/mark3labs"
-	testdata "github.com/redpanda-data/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 )
 
 func TestExtraPropertiesSchemaModification(t *testing.T) {
