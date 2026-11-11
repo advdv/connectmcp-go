@@ -19,6 +19,8 @@ import (
 	"go/token"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/gen"
@@ -61,7 +63,7 @@ import (
 
 var (
 {{- range $key, $val := .Tools }}
-  {{$key}}Tool = {{ printf "%#v" $val }}
+  {{$key}}Tool = {{ toolLiteral $val }}
 {{- end }}
 )
 
@@ -266,6 +268,42 @@ type Tool struct {
 	MCPTool      runtime.Tool
 }
 
+// toolLiteral renders t as Go source for a runtime.Tool composite literal.
+//
+// The literal is spelled out explicitly instead of using fmt's %#v so the
+// emitted type names agree with the imports in fileTemplate. %#v prints the
+// type's reflected name, which changes with the toolchain: when encoding/json
+// is backed by JSON v2 (Go 1.27 default, or GOEXPERIMENT=jsonv2 earlier),
+// json.RawMessage is an alias of jsontext.Value and %#v would emit
+// "jsontext.Value{...}", which does not compile against the
+// "encoding/json" import.
+func toolLiteral(t runtime.Tool) string {
+	var b strings.Builder
+	b.WriteString("runtime.Tool{Name: ")
+	b.WriteString(strconv.Quote(t.Name))
+	b.WriteString(", Description: ")
+	b.WriteString(strconv.Quote(t.Description))
+	b.WriteString(", RawInputSchema: ")
+	b.WriteString(rawMessageLiteral(t.RawInputSchema))
+	b.WriteString(", RawOutputSchema: ")
+	b.WriteString(rawMessageLiteral(t.RawOutputSchema))
+	b.WriteString("}")
+	return b.String()
+}
+
+// rawMessageLiteral renders raw as a json.RawMessage conversion of a string
+// literal, preferring a raw (backquoted) string for readability.
+func rawMessageLiteral(raw []byte) string {
+	if raw == nil {
+		return "json.RawMessage(nil)"
+	}
+	s := string(raw)
+	if strconv.CanBackquote(s) {
+		return "json.RawMessage(`" + s + "`)"
+	}
+	return "json.RawMessage(" + strconv.Quote(s) + ")"
+}
+
 // Delegate to gen package - kept for backward compatibility with tests in this package.
 var (
 	kindToType          = gen.KindToType
@@ -317,7 +355,9 @@ func (g *FileGenerator) Generate(packageSuffix string) {
 	}
 
 	fileTpl := fileTemplate
-	tpl, err := template.New("gen").Parse(fileTpl)
+	tpl, err := template.New("gen").Funcs(template.FuncMap{
+		"toolLiteral": toolLiteral,
+	}).Parse(fileTpl)
 	if err != nil {
 		g.gen.Error(err)
 		return
