@@ -100,3 +100,25 @@ After changing protos: `just generate`.
 1. Edit proto or generator code
 2. `just generate` (regenerates test proto Go code + descriptor set)
 3. `just test-unit` (runs unit tests, including golden comparison)
+
+## Releasing
+
+Releases are cut by pushing a `vX.Y.Z` tag on main; `.github/workflows/release.yml` then:
+
+- builds the plugin binaries and creates the GitHub release;
+- pushes `proto/` to `buf.build/advdv/protoc-gen-go-mcp` labeled with the tag, the commit SHA, and `main`.
+
+The BSR `main` label is the module's default label and is moved **only** by releases
+(`test.yml` pushes main-branch commits under their SHA label only). An unqualified
+`buf.build/advdv/protoc-gen-go-mcp` dependency therefore resolves to the latest release.
+
+Unless asked otherwise, a release bumps the **patch** component of the latest tag
+(e.g. `v0.1.3` -> `v0.1.4`). To release:
+
+1. Ensure main is pushed and its `Test` workflow is green.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+3. Monitor the `Release` workflow until it succeeds (`gh run watch`).
+4. Verify the BSR `main` label moved to the release commit, e.g.
+   `buf registry module label info buf.build/advdv/protoc-gen-go-mcp:main` matches the commit of
+   `:vX.Y.Z`, and that a scratch module depending on unqualified
+   `buf.build/advdv/protoc-gen-go-mcp` resolves (`buf dep update`) to that same commit in `buf.lock`.

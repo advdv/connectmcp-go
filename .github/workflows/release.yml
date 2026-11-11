@@ -65,8 +65,38 @@ jobs:
           !protoc-gen-go-mcp-*.tar.gz
           !protoc-gen-go-mcp-*.zip
 
+  # Publishes mcp/v1/annotations.proto to buf.build/advdv/protoc-gen-go-mcp
+  # labeled with the release tag (e.g. v1.2.3), so consumers can pin
+  # buf.build/advdv/protoc-gen-go-mcp:v1.2.3 alongside the matching Go module
+  # version. It also moves the default label "main" to this release, so an
+  # unqualified dependency resolves to the latest release (test.yml pushes
+  # main-branch commits under their SHA label only).
+  bsr:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up tools (versions from mise.toml)
+      uses: jdx/mise-action@v5
+      with:
+        install_args: buf
+
+    - name: Push to Buf Schema Registry
+      env:
+        BUF_TOKEN: ${{ secrets.BUF_TOKEN }}
+      run: |
+        if [ -z "$BUF_TOKEN" ]; then
+          echo "::error::BUF_TOKEN not set, cannot publish release to BSR"
+          exit 1
+        fi
+        buf push proto \
+          --label "${{ github.ref_name }}" \
+          --label main \
+          --label "${{ github.sha }}" \
+          --source-control-url "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+
   release:
-    needs: build
+    needs: [build, bsr]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7

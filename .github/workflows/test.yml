@@ -42,10 +42,12 @@ jobs:
       if: github.event_name == 'pull_request'
       run: buf breaking proto --against ".git#branch=origin/${{ github.base_ref }},subdir=proto"
 
-    # Publishes mcp/v1/annotations.proto as buf.build/advdv/protoc-gen-go-mcp.
-    # The Git SHA label (plus branch labels from --git-metadata) lets consumers
-    # match their buf.lock pin to the pseudo-version in their go.mod.
-    # Pushing unchanged content is a no-op on the BSR.
+    # Publishes mcp/v1/annotations.proto as buf.build/advdv/protoc-gen-go-mcp,
+    # labeled only with the Git SHA so consumers can pin unreleased commits
+    # (matching the pseudo-version in their go.mod). Because an explicit
+    # --label is given, the BSR default label ("main") is NOT moved: only
+    # release.yml moves it, so an unqualified dependency resolves to the
+    # latest release. Pushing unchanged content is a no-op on the BSR.
     - name: Push to Buf Schema Registry
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       env:
@@ -55,7 +57,9 @@ jobs:
           echo "::warning::BUF_TOKEN not set, skipping BSR push"
           exit 0
         fi
-        buf push proto --git-metadata --label "${{ github.sha }}"
+        buf push proto \
+          --label "${{ github.sha }}" \
+          --source-control-url "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
 
   build:
     runs-on: ubuntu-latest
