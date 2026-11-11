@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -22,13 +22,13 @@ jobs:
       run: golangci-lint run --max-issues-per-linter 0 --max-same-issues 0
 
   build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Setup Bazel
-      uses: useblacksmith/setup-bazel@v1
+      uses: bazel-contrib/setup-bazel@0.19.1
       with:
         bazelisk-cache: true
         disk-cache: ${{ github.ref }}
