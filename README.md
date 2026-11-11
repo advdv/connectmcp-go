@@ -181,6 +181,28 @@ rpc GetEquityResearchReport(GetEquityResearchReportRequest) returns (GetEquityRe
 
 The value must match `^[a-z_][a-z0-9_-]{0,63}$` — lowercase snake/kebab case within every provider's function-name rules; lowercase guarantees configured names pass untouched through consumers' de-mangling heuristics (they key on the UpperCamel `Service_` segment of derived names). Code generation fails on an invalid value and on duplicate tool names within a service (one service is one MCP server registration — different services may legitimately reuse a name). The dynamic registration path (`gen.RegisterService`) applies the same option; an invalid or colliding configured name there falls back to the derived name so a tool is never silently dropped.
 
+#### Importing the annotation with Buf
+
+Depend on the annotation through the Buf Schema Registry instead of vendoring it:
+
+```yaml
+# buf.yaml
+deps:
+  - buf.build/advdv/protoc-gen-go-mcp
+```
+
+In managed mode, keep its `go_package` so generated code imports the `mcpv1` package from this Go module. Don't generate Go code for it yourself, because a second copy conflicts at registration:
+
+```yaml
+# buf.gen.yaml
+managed:
+  disable:
+    - file_option: go_package
+      module: buf.build/advdv/protoc-gen-go-mcp
+```
+
+To match the plugin version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/protoc-gen-go-mcp:<git-sha>`.
+
 ## Migrating from mark3labs-only (pre-v0.2)
 
 Generated code no longer imports `mark3labs/mcp-go` directly. It programs against the `runtime.MCPServer` interface, and you pick the MCP library via an adapter package.
