@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
 	grpc "google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -62,13 +61,10 @@ func RegisterOperationsHandler(s runtime.MCPServer, srv OperationsServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.CancelOperation(ctx, &req)
@@ -106,13 +102,10 @@ func RegisterOperationsHandler(s runtime.MCPServer, srv OperationsServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.DeleteOperation(ctx, &req)
@@ -150,13 +143,10 @@ func RegisterOperationsHandler(s runtime.MCPServer, srv OperationsServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.GetOperation(ctx, &req)
@@ -194,13 +184,10 @@ func RegisterOperationsHandler(s runtime.MCPServer, srv OperationsServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.ListOperations(ctx, &req)
@@ -238,13 +225,10 @@ func RegisterOperationsHandler(s runtime.MCPServer, srv OperationsServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.WaitOperation(ctx, &req)
@@ -306,13 +290,10 @@ func ForwardToConnectOperationsClient(s runtime.MCPServer, client ConnectOperati
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.CancelOperation(ctx, connect.NewRequest(&req))
@@ -347,13 +328,10 @@ func ForwardToConnectOperationsClient(s runtime.MCPServer, client ConnectOperati
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.DeleteOperation(ctx, connect.NewRequest(&req))
@@ -388,13 +366,10 @@ func ForwardToConnectOperationsClient(s runtime.MCPServer, client ConnectOperati
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetOperation(ctx, connect.NewRequest(&req))
@@ -429,13 +404,10 @@ func ForwardToConnectOperationsClient(s runtime.MCPServer, client ConnectOperati
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.ListOperations(ctx, connect.NewRequest(&req))
@@ -470,13 +442,10 @@ func ForwardToConnectOperationsClient(s runtime.MCPServer, client ConnectOperati
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.WaitOperation(ctx, connect.NewRequest(&req))
@@ -519,13 +488,10 @@ func ForwardToOperationsClient(s runtime.MCPServer, client OperationsClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.CancelOperation(ctx, &req)
@@ -560,13 +526,10 @@ func ForwardToOperationsClient(s runtime.MCPServer, client OperationsClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.DeleteOperation(ctx, &req)
@@ -601,13 +564,10 @@ func ForwardToOperationsClient(s runtime.MCPServer, client OperationsClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetOperation(ctx, &req)
@@ -642,13 +602,10 @@ func ForwardToOperationsClient(s runtime.MCPServer, client OperationsClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.ListOperations(ctx, &req)
@@ -683,13 +640,10 @@ func ForwardToOperationsClient(s runtime.MCPServer, client OperationsClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.WaitOperation(ctx, &req)

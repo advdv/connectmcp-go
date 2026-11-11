@@ -10,7 +10,6 @@ import (
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/protobuf/encoding/protojson"
 	"connectrpc.com/connect"
 	grpc "google.golang.org/grpc"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
@@ -59,13 +58,10 @@ func RegisterTestServiceHandler(s runtime.MCPServer, srv TestServiceServer, opts
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.CreateItem(ctx, &req)
@@ -103,13 +99,10 @@ func RegisterTestServiceHandler(s runtime.MCPServer, srv TestServiceServer, opts
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.GetItem(ctx, &req)
@@ -147,13 +140,10 @@ func RegisterTestServiceHandler(s runtime.MCPServer, srv TestServiceServer, opts
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.ProcessWellKnownTypes(ctx, &req)
@@ -191,13 +181,10 @@ func RegisterTestServiceHandler(s runtime.MCPServer, srv TestServiceServer, opts
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.TestValidation(ctx, &req)
@@ -257,13 +244,10 @@ func ForwardToConnectTestServiceClient(s runtime.MCPServer, client ConnectTestSe
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.CreateItem(ctx, connect.NewRequest(&req))
@@ -298,13 +282,10 @@ func ForwardToConnectTestServiceClient(s runtime.MCPServer, client ConnectTestSe
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetItem(ctx, connect.NewRequest(&req))
@@ -339,13 +320,10 @@ func ForwardToConnectTestServiceClient(s runtime.MCPServer, client ConnectTestSe
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.ProcessWellKnownTypes(ctx, connect.NewRequest(&req))
@@ -380,13 +358,10 @@ func ForwardToConnectTestServiceClient(s runtime.MCPServer, client ConnectTestSe
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.TestValidation(ctx, connect.NewRequest(&req))
@@ -429,13 +404,10 @@ func ForwardToTestServiceClient(s runtime.MCPServer, client TestServiceClient, o
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.CreateItem(ctx, &req)
@@ -470,13 +442,10 @@ func ForwardToTestServiceClient(s runtime.MCPServer, client TestServiceClient, o
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetItem(ctx, &req)
@@ -511,13 +480,10 @@ func ForwardToTestServiceClient(s runtime.MCPServer, client TestServiceClient, o
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.ProcessWellKnownTypes(ctx, &req)
@@ -552,13 +518,10 @@ func ForwardToTestServiceClient(s runtime.MCPServer, client TestServiceClient, o
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.TestValidation(ctx, &req)

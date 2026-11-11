@@ -20,6 +20,5 @@ go_library(
         "//pkg/testdata/gen/go/testdata",
         "@com_connectrpc_connect//:connect",
         "@org_golang_google_grpc//:grpc",
-        "@org_golang_google_protobuf//encoding/protojson",
     ],
 )

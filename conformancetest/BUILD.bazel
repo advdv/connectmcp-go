@@ -5,6 +5,7 @@ go_test(
     srcs = [
         "aisdk_conformance_test.go",
         "offline_schema_test.go",
+        "selfcorrect_conformance_test.go",
     ],
     deps = [
         "//pkg/gen",

@@ -3,6 +3,7 @@ package gen
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -111,8 +112,8 @@ func TestRegister_PanicOnNilArguments_WithExtraProperties(t *testing.T) {
 		}
 	}`))
 
-	// The handler should NOT have been called because the nil map
-	// causes json.Marshal to produce "null", which protojson rejects.
+	// The handler should NOT have been called: a nil arguments map is rejected
+	// before unmarshaling.
 	if handlerCalled {
 		t.Error("Handler should not have been called with nil arguments")
 	}
@@ -128,8 +129,13 @@ func TestRegister_PanicOnNilArguments_WithExtraProperties(t *testing.T) {
 		t.Fatalf("Failed to unmarshal result: %v", err)
 	}
 
-	// Should contain an error field in the JSON-RPC response.
-	if _, hasError := resp["error"]; !hasError {
-		t.Errorf("Expected JSON-RPC error response for nil arguments, got: %s", string(resultBytes))
+	// Bad arguments come back as a tool error result (isError: true) the
+	// model can read and correct, not as a JSON-RPC protocol error.
+	toolResult, _ := resp["result"].(map[string]any)
+	if isError, _ := toolResult["isError"].(bool); !isError {
+		t.Errorf("Expected a tool error result for nil arguments, got: %s", string(resultBytes))
+	}
+	if !strings.Contains(string(resultBytes), "must be a JSON object") {
+		t.Errorf("Expected a model-readable explanation, got: %s", string(resultBytes))
 	}
 }

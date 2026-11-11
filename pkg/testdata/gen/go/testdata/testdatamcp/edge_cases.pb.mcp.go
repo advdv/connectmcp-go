@@ -10,7 +10,6 @@ import (
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/protobuf/encoding/protojson"
 	"connectrpc.com/connect"
 	grpc "google.golang.org/grpc"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
@@ -69,13 +68,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.AllScalarTypes(ctx, &req)
@@ -113,13 +109,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.DeepNesting(ctx, &req)
@@ -157,13 +150,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.EnumFields(ctx, &req)
@@ -201,13 +191,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.MapVariants(ctx, &req)
@@ -245,13 +232,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.MultipleOneofs(ctx, &req)
@@ -289,13 +273,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.NumericValidation(ctx, &req)
@@ -333,13 +314,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.OneofRecursive(ctx, &req)
@@ -377,13 +355,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.RecursiveTree(ctx, &req)
@@ -421,13 +396,10 @@ func RegisterEdgeCaseServiceHandler(s runtime.MCPServer, srv EdgeCaseServiceServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.RepeatedMessages(ctx, &req)
@@ -497,13 +469,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.AllScalarTypes(ctx, connect.NewRequest(&req))
@@ -538,13 +507,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.DeepNesting(ctx, connect.NewRequest(&req))
@@ -579,13 +545,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.EnumFields(ctx, connect.NewRequest(&req))
@@ -620,13 +583,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.MapVariants(ctx, connect.NewRequest(&req))
@@ -661,13 +621,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.MultipleOneofs(ctx, connect.NewRequest(&req))
@@ -702,13 +659,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.NumericValidation(ctx, connect.NewRequest(&req))
@@ -743,13 +697,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.OneofRecursive(ctx, connect.NewRequest(&req))
@@ -784,13 +735,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.RecursiveTree(ctx, connect.NewRequest(&req))
@@ -825,13 +773,10 @@ func ForwardToConnectEdgeCaseServiceClient(s runtime.MCPServer, client ConnectEd
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.RepeatedMessages(ctx, connect.NewRequest(&req))
@@ -874,13 +819,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.AllScalarTypes(ctx, &req)
@@ -915,13 +857,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.DeepNesting(ctx, &req)
@@ -956,13 +895,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.EnumFields(ctx, &req)
@@ -997,13 +933,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.MapVariants(ctx, &req)
@@ -1038,13 +971,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.MultipleOneofs(ctx, &req)
@@ -1079,13 +1009,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.NumericValidation(ctx, &req)
@@ -1120,13 +1047,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.OneofRecursive(ctx, &req)
@@ -1161,13 +1085,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.RecursiveTree(ctx, &req)
@@ -1202,13 +1123,10 @@ func ForwardToEdgeCaseServiceClient(s runtime.MCPServer, client EdgeCaseServiceC
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.RepeatedMessages(ctx, &req)

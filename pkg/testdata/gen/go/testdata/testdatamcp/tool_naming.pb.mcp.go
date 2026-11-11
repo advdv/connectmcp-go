@@ -10,7 +10,6 @@ import (
 import (
 	"context"
 	"encoding/json"
-	"google.golang.org/protobuf/encoding/protojson"
 	"connectrpc.com/connect"
 	grpc "google.golang.org/grpc"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
@@ -57,13 +56,10 @@ func RegisterToolNamingServiceHandler(s runtime.MCPServer, srv ToolNamingService
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.GetDashboard(ctx, &req)
@@ -101,13 +97,10 @@ func RegisterToolNamingServiceHandler(s runtime.MCPServer, srv ToolNamingService
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, &req)
@@ -145,13 +138,10 @@ func RegisterToolNamingServiceHandler(s runtime.MCPServer, srv ToolNamingService
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.GetWidget(ctx, &req)
@@ -209,13 +199,10 @@ func ForwardToConnectToolNamingServiceClient(s runtime.MCPServer, client Connect
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetDashboard(ctx, connect.NewRequest(&req))
@@ -250,13 +237,10 @@ func ForwardToConnectToolNamingServiceClient(s runtime.MCPServer, client Connect
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, connect.NewRequest(&req))
@@ -291,13 +275,10 @@ func ForwardToConnectToolNamingServiceClient(s runtime.MCPServer, client Connect
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetWidget(ctx, connect.NewRequest(&req))
@@ -340,13 +321,10 @@ func ForwardToToolNamingServiceClient(s runtime.MCPServer, client ToolNamingServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetDashboard(ctx, &req)
@@ -381,13 +359,10 @@ func ForwardToToolNamingServiceClient(s runtime.MCPServer, client ToolNamingServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetEquityResearchReportForInstitutionalAndRetailClients(ctx, &req)
@@ -422,13 +397,10 @@ func ForwardToToolNamingServiceClient(s runtime.MCPServer, client ToolNamingServ
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.GetWidget(ctx, &req)

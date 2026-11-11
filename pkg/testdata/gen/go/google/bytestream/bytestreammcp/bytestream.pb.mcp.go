@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
 	grpc "google.golang.org/grpc"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -53,13 +52,10 @@ func RegisterByteStreamHandler(s runtime.MCPServer, srv ByteStreamServer, opts .
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := srv.QueryWriteStatus(ctx, &req)
@@ -113,13 +109,10 @@ func ForwardToConnectByteStreamClient(s runtime.MCPServer, client ConnectByteStr
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.QueryWriteStatus(ctx, connect.NewRequest(&req))
@@ -162,13 +155,10 @@ func ForwardToByteStreamClient(s runtime.MCPServer, client ByteStreamClient, opt
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, &req); err != nil {
-				return nil, err
+			// Failures are returned to the model as a tool error naming the bad field,
+			// so it can correct the arguments and call the tool again.
+			if err := runtime.UnmarshalArguments(message, &req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			resp, err := client.QueryWriteStatus(ctx, &req)

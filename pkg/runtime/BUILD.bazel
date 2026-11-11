@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "runtime",
     srcs = [
+        "arguments.go",
         "error.go",
         "extra_properties.go",
         "server.go",
@@ -19,6 +20,7 @@ go_library(
         "@org_golang_google_protobuf//encoding/protojson",
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/dynamicpb",
     ],
 )
 
@@ -26,6 +28,7 @@ go_test(
     name = "runtime_test",
     size = "small",
     srcs = [
+        "arguments_test.go",
         "decode_fuzz_test.go",
         "error_edge_cases_test.go",
         "error_test.go",

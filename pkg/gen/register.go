@@ -16,12 +16,10 @@ package gen
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/redpanda-data/protoc-gen-go-mcp/pkg/runtime"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
@@ -151,18 +149,14 @@ func RegisterService(s runtime.MCPServer, sd protoreflect.ServiceDescriptor, han
 				return runtime.NewToolResultError(err.Error()), nil
 			}
 
-			// Marshal to JSON, then unmarshal into proto
-			marshaled, err := json.Marshal(message)
-			if err != nil {
-				return nil, err
-			}
-
 			req := newMsg(md.Input())
 			if req == nil {
 				return nil, fmt.Errorf("NewMessage returned nil for %s", md.Input().FullName())
 			}
-			if err := (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(marshaled, req); err != nil {
-				return nil, err
+			// Unmarshal into the proto. Failures are returned to the model as a
+			// tool error naming the bad field, so it can correct and retry.
+			if err := runtime.UnmarshalArguments(message, req); err != nil {
+				return runtime.NewToolResultError(err.Error()), nil
 			}
 
 			// Call handler
