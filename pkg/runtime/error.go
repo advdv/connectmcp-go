@@ -18,12 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // toolError is the JSON shape of a failed RPC as shown to the model.
@@ -102,4 +104,47 @@ func detailJSON(detail *connect.ErrorDetail) json.RawMessage {
 		Value []byte `json:"value"`
 	}{packed.GetTypeUrl(), packed.GetValue()})
 	return b
+}
+
+// ParseError parses the text of a tool error result written by HandleError
+// back into the connect error it describes: it is the inverse of HandleError,
+// for clients. The error has exactly the code, message and details in text
+// and, being a peer's verdict, is marked remote. Text that is not such a tool
+// error (not JSON, no known code, an unreadable detail) is reported with the
+// second return value; nothing is assumed in its place.
+func ParseError(text string) (*connect.Error, error) {
+	var in toolError
+	if err := json.Unmarshal([]byte(text), &in); err != nil {
+		return nil, fmt.Errorf("tool error is not JSON: %w", err)
+	}
+	var code connect.Code
+	if in.Code == "" || in.Code != strings.ToUpper(in.Code) || code.UnmarshalText([]byte(strings.ToLower(in.Code))) != nil {
+		return nil, fmt.Errorf("tool error has no known code: %q", in.Code)
+	}
+	cerr := connect.NewError(code, in.Message)
+	for i, raw := range in.Details {
+		detail, err := parseDetail(raw)
+		if err != nil {
+			return nil, fmt.Errorf("tool error detail %d: %w", i, err)
+		}
+		cerr = cerr.WithDetail(detail)
+	}
+	return cerr.WithRemote(), nil
+}
+
+// parseDetail is the inverse of detailJSON.
+func parseDetail(raw json.RawMessage) (*connect.ErrorDetail, error) {
+	packed := &anypb.Any{}
+	if err := protojson.Unmarshal(raw, packed); err != nil {
+		// A detail whose type is not linked in was written with its raw value.
+		var opaque struct {
+			Type  string `json:"@type"`
+			Value []byte `json:"value"`
+		}
+		if json.Unmarshal(raw, &opaque) != nil || opaque.Type == "" {
+			return nil, err
+		}
+		packed = &anypb.Any{TypeUrl: opaque.Type, Value: opaque.Value}
+	}
+	return connectproto.NewErrorDetail(packed)
 }

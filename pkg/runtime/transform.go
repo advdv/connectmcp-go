@@ -51,10 +51,37 @@ const DefaultMaxRecursionDepth = 3
 // phrased to be model-readable: a failed tool call is returned to the model for
 // one-turn self-correction, so the message names the fix.
 func DecodeArguments(md protoreflect.MessageDescriptor, args map[string]any) error {
-	return decodeMessage(md, args)
+	return decodeMessage(md, args, true)
 }
 
-func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any) error {
+// DecodeResult unmarshals the JSON of a successful tool result, as written by
+// EncodeMessage, into msg: it is the inverse of EncodeMessage, for clients.
+// Oneof wrappers and recursion-depth placeholders are rewritten as in
+// DecodeArguments. Unlike arguments, a result is not written by a model, so a
+// string in a google.protobuf.Value stays a string. Unknown fields are
+// ignored, as connect's JSON codec does.
+func DecodeResult(result json.RawMessage, msg proto.Message) error {
+	var obj map[string]any
+	if err := json.Unmarshal(result, &obj); err != nil {
+		return fmt.Errorf("tool result is not a JSON object: %w", err)
+	}
+	if obj == nil {
+		return fmt.Errorf("tool result is not a JSON object")
+	}
+	if err := decodeMessage(msg.ProtoReflect().Descriptor(), obj, false); err != nil {
+		return err
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	return (protojson.UnmarshalOptions{DiscardUnknown: true}).Unmarshal(b, msg)
+}
+
+// decodeMessage rewrites obj in place. liftWKT tells whether to parse
+// JSON-encoded strings in dynamic well-known type fields, which only a model
+// client produces.
+func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any, liftWKT bool) error {
 	// 1) Lift oneof discriminated wrappers to native member fields.
 	for i := 0; i < md.Oneofs().Len(); i++ {
 		oo := md.Oneofs().Get(i)
@@ -77,7 +104,9 @@ func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any) error 
 		// sent native JSON (e.g. Gemini, whose schema is not downgraded) is left
 		// untouched. Covers scalar, repeated and map-valued fields.
 		if isDynamicWKTField(fd) {
-			liftStringifiedWKT(fd, obj)
+			if liftWKT {
+				liftStringifiedWKT(fd, obj)
+			}
 			continue
 		}
 		if fd.Kind() != protoreflect.MessageKind && fd.Kind() != protoreflect.GroupKind {
@@ -110,7 +139,7 @@ func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any) error 
 				if child == nil {
 					continue
 				}
-				if err := decodeMessage(fd.MapValue().Message(), child); err != nil {
+				if err := decodeMessage(fd.MapValue().Message(), child, liftWKT); err != nil {
 					return err
 				}
 				m[k] = child
@@ -128,7 +157,7 @@ func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any) error 
 				if child == nil {
 					continue
 				}
-				if err := decodeMessage(fd.Message(), child); err != nil {
+				if err := decodeMessage(fd.Message(), child, liftWKT); err != nil {
 					return err
 				}
 				arr[idx] = child
@@ -141,7 +170,7 @@ func decodeMessage(md protoreflect.MessageDescriptor, obj map[string]any) error 
 			if child == nil {
 				continue
 			}
-			if err := decodeMessage(fd.Message(), child); err != nil {
+			if err := decodeMessage(fd.Message(), child, liftWKT); err != nil {
 				return err
 			}
 			obj[name] = child

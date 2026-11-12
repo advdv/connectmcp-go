@@ -24,6 +24,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -367,6 +368,41 @@ func roundTrip(t *testing.T, orig, into proto.Message) {
 	}
 	if diff := cmp.Diff(orig, into, protocmp.Transform()); diff != "" {
 		t.Fatalf("round trip mismatch (-want +got):\n%s\nencoded: %s", diff, encoded)
+	}
+
+	// A client reading the same JSON as a tool result gets the message back too.
+	result := orig.ProtoReflect().New().Interface()
+	if err := runtime.DecodeResult(encoded, result); err != nil {
+		t.Fatalf("decode result: %v\nencoded: %s", err, encoded)
+	}
+	if diff := cmp.Diff(orig, result, protocmp.Transform()); diff != "" {
+		t.Fatalf("result round trip mismatch (-want +got):\n%s\nencoded: %s", diff, encoded)
+	}
+}
+
+// TestDecodeResult_KeepsValueStrings checks that a result, unlike arguments,
+// is not searched for JSON-encoded strings: a string Value that looks like
+// JSON stays a string.
+func TestDecodeResult_KeepsValueStrings(t *testing.T) {
+	orig := &testdata.ProcessWellKnownTypesRequest{Config: structpb.NewStringValue("42")}
+	encoded, err := runtime.EncodeMessage(orig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := &testdata.ProcessWellKnownTypesRequest{}
+	if err := runtime.DecodeResult(encoded, got); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(orig, got, protocmp.Transform()); diff != "" {
+		t.Fatalf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestDecodeResult_NotAnObject(t *testing.T) {
+	for _, in := range []string{`null`, `[]`, `"x"`, `{`} {
+		if err := runtime.DecodeResult(json.RawMessage(in), &testdata.CreateItemResponse{}); err == nil {
+			t.Errorf("DecodeResult(%s): expected an error", in)
+		}
 	}
 }
 

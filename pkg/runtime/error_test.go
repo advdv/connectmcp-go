@@ -237,3 +237,61 @@ func TestHandleError_WrappedConnectError(t *testing.T) {
 		g.Expect(resp).To(Equal(map[string]any{"code": "UNAVAILABLE", "message": "try again"}))
 	})
 }
+
+// TestParseError checks that ParseError is the inverse of HandleError: the
+// code, message and details of a handler's error come back, marked remote.
+func TestParseError(t *testing.T) {
+	g := NewWithT(t)
+
+	for code := connect.CodeCanceled; code <= connect.CodeUnauthenticated; code++ {
+		result, err := HandleError(connect.NewError(code, "went wrong"))
+		g.Expect(err).ToNot(HaveOccurred())
+		parsed, err := ParseError(result.Text)
+		g.Expect(err).ToNot(HaveOccurred(), result.Text)
+		g.Expect(parsed.Code()).To(Equal(code))
+		g.Expect(parsed.Message()).To(Equal("went wrong"))
+		g.Expect(parsed.Details()).To(BeEmpty())
+		g.Expect(parsed.IsRemote()).To(BeTrue())
+	}
+
+	// Details come back in order, also one whose type is not linked in.
+	violation := &errdetails.BadRequest{FieldViolations: []*errdetails.BadRequest_FieldViolation{{Field: "name", Description: "required"}}}
+	orig := withDetails(t, connect.NewError(connect.CodeInvalidArgument, "invalid"), violation, wrapperspb.String("info")).
+		WithDetail(&connect.ErrorDetail{Type: "example.NotLinked", Value: []byte{1, 2, 3}})
+	result, err := HandleError(orig)
+	g.Expect(err).ToNot(HaveOccurred())
+	parsed, err := ParseError(result.Text)
+	g.Expect(err).ToNot(HaveOccurred(), result.Text)
+	g.Expect(parsed.Details()).To(HaveLen(3))
+	for i, detail := range orig.Details() {
+		g.Expect(parsed.Details()[i].Type).To(Equal(detail.Type))
+		g.Expect(parsed.Details()[i].Value).To(Equal(detail.Value))
+	}
+
+	// A message-less error stays message-less.
+	result, err = HandleError(context.Canceled)
+	g.Expect(err).ToNot(HaveOccurred())
+	parsed, err = ParseError(result.Text)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(parsed.Code()).To(Equal(connect.CodeCanceled))
+	g.Expect(parsed.Message()).To(BeEmpty())
+}
+
+// TestParseError_Malformed checks that nothing is inferred from text that is
+// not a tool error.
+func TestParseError_Malformed(t *testing.T) {
+	for name, text := range map[string]string{
+		"not JSON":          "boom",
+		"no code":           `{"message":"x"}`,
+		"unknown code":      `{"code":"NOPE"}`,
+		"lower-case code":   `{"code":"not_found"}`,
+		"unreadable detail": `{"code":"NOT_FOUND","details":[{"resourceName":"x"}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			parsed, err := ParseError(text)
+			g.Expect(err).To(HaveOccurred())
+			g.Expect(parsed).To(BeNil())
+		})
+	}
+}

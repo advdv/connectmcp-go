@@ -61,7 +61,7 @@ func trustUpstreamErrors(next connect.ServerFunc) connect.ServerFunc {
 }
 
 // TestConnectV2_E2E drives MCP tool calls through a generated connect-go v2
-// client into a connect server, over both the in-process transport and HTTP.
+// client into a connect server, over the in-process transport, HTTP and MCP.
 func TestConnectV2_E2E(t *testing.T) {
 	var procedures []string
 	record := func(next connect.ServerFunc) connect.ServerFunc {
@@ -79,9 +79,20 @@ func TestConnectV2_E2E(t *testing.T) {
 	httpServer := httptest.NewServer(mux)
 	t.Cleanup(httpServer.Close)
 
+	// The upstream can also be reached as an MCP server itself.
+	mcpHandler, err := NewHandler(server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mcpHTTPServer := httptest.NewServer(mcpHandler)
+	t.Cleanup(mcpHTTPServer.Close)
+	mcpTransport := NewTransport(mcpHTTPServer.Client(), mcpHTTPServer.URL)
+	t.Cleanup(func() { _ = mcpTransport.Close() })
+
 	for name, transport := range map[string]connect.Transport{
 		"in-process": connectinprocess.New(server),
 		"http":       connecthttp.NewTransport(httpServer.Client(), httpServer.URL),
+		"mcp":        mcpTransport,
 	} {
 		t.Run(name, func(t *testing.T) {
 			g := NewWithT(t)

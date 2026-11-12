@@ -24,6 +24,7 @@ just gazelle              # Sync BUILD files from go.mod
 
 ```
 connectmcp.go               Package connectmcp (//:connectmcp-go), THE entry point: NewHandler (http.Handler) and Register, on a *connect.Server
+transport.go                NewTransport: a connect.Transport that calls the tools of a served server, for generated clients
 pkg/gen/                    Core library:
   schema.go                 JSON schema generation from protoreflect descriptors
   validate.go               (buf.validate) rules -> JSON Schema keywords and description lines
@@ -94,6 +95,15 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   `runtime.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`. It limits the message,
   not the HTTP body that go-sdk reads in full.
 - Forwarding to a remote: register a generated connect client as the handler on a connect server.
+- `connectmcp.NewTransport` is the client side of `NewHandler` (like `connecthttp.NewTransport`): one
+  lazily opened go-sdk session over streamable HTTP, ended by `Close`. Every server-side encoding has
+  its inverse in `pkg/runtime`, and the transport only composes them: arguments are
+  `runtime.EncodeMessage` (the schema's shape, never validated), results `runtime.DecodeResult`,
+  tool errors `runtime.ParseError` (remote, nothing inferred; malformed is `INTERNAL`). Change an
+  encoding and its inverse together. The call's `CallInfo.RequestHeader()` is added to the HTTP
+  request of that tool call only (a RoundTripper reading the request context; the session is opened
+  on a context without values), never replacing headers the MCP client set. A call without a tool
+  result (unknown tool, transport failure) is `UNAVAILABLE`, or the context's code.
 - Tool annotations: `readOnlyHint`/`idempotentHint` are derived from the standard `idempotency_level`
   (`NO_SIDE_EFFECTS` -> read-only, idempotent, not destructive; `IDEMPOTENT` -> idempotent), never set
   in the mcp option, so side effects have one source of truth. `(connectmcp.v1.tool_annotations)` adds
@@ -135,6 +145,8 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
 - Conformance tests: `go test ./conformancetest/` (needs API keys, tests skip if missing)
 - connectmcp API (HTTP handler incl. stateless JSON, header forwarding, registration errors):
   `connectmcp_test.go` (repo root)
+- Client transport: `transport_test.go` (generated clients through `NewTransport` into `NewHandler`
+  over HTTP); inverse encodings in `pkg/runtime/transform_test.go` and `error_test.go`
 - Behavioral tests inherited from the codegen era (schemas, round trips, tool filter,
   connect E2E) live in the root `*_test.go` files; `testsupport_test.go` holds their wiring
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`

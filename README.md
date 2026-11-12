@@ -191,6 +191,24 @@ Everything else is reported by code alone, without a message:
 
 So return `connect.NewError(...)` with a message meant for the model, and keep internals in the wrapped error or in `.WithCause(err)` for logging.
 
+### Calling the tools with a generated client
+
+`connectmcp.NewTransport` is the client-side counterpart of `NewHandler`: a `connect.Transport` that calls each RPC as an MCP tool over streamable HTTP. A generated client built on it reaches the server through MCP, so tests written against the client can run once per way of reaching the server:
+
+```go
+for name, transport := range map[string]connect.Transport{
+    "connect": connecthttp.NewTransport(srv.Client(), srv.URL+"/rpc"),
+    "mcp":     connectmcp.NewTransport(srv.Client(), srv.URL+"/mcp"), // has Close, to end the MCP session
+} {
+    client := itemsv1connect.NewItemServiceClient(connect.NewClient(transport))
+    // the same assertions on responses, *connect.Error codes and details
+}
+```
+
+The request message is sent as tool arguments in the shape of the tool's input schema, without validating it. A tool error comes back as a remote `*connect.Error` built only from the code, message and details that arrived. Request headers set on a call (`connect.NewClientContext`) are sent with the HTTP request of that call. MCP has no response headers or trailers, and only unary RPCs can be called.
+
+To do the same over an MCP session you own, `runtime.EncodeMessage`, `runtime.DecodeResult` and `runtime.ParseError` are the encodings the transport uses.
+
 ### Request size limit
 
 `connectmcp.WithReadMaxBytes(n)` is the counterpart of `connecthttp.WithReadMaxBytes`: it limits the request message, measured as the JSON of the tool call's arguments, to `n` bytes. The default is 4 MiB, as in connecthttp, and zero allows any size. The limit is checked before the arguments are decoded. Larger arguments fail the call, while the handler receives its request message, with connecthttp's own error, and interceptors see it:

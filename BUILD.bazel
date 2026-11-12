@@ -152,7 +152,10 @@ nogo(
 
 go_library(
     name = "connectmcp-go",
-    srcs = ["connectmcp.go"],
+    srcs = [
+        "connectmcp.go",
+        "transport.go",
+    ],
     importpath = "github.com/advdv/connectmcp-go",
     visibility = ["//visibility:public"],
     deps = [
@@ -179,6 +182,7 @@ go_test(
         "schema_test.go",
         "testsupport_test.go",
         "tool_filter_e2e_test.go",
+        "transport_test.go",
     ],
     embed = [":connectmcp-go"],
     deps = [
