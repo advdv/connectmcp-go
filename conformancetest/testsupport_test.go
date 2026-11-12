@@ -32,6 +32,9 @@ func testTool(service, method string) runtime.Tool {
 	if md == nil {
 		md = testdata.File_testdata_edge_cases_proto.Services().ByName(protoreflect.Name(service))
 	}
+	if md == nil {
+		md = testdata.File_testdata_validation_proto.Services().ByName(protoreflect.Name(service))
+	}
 	m := md.Methods().ByName(protoreflect.Name(method))
 	description, _ := gen.ConfiguredToolDescription(m)
 	return gen.ToolForMethod(m, description)

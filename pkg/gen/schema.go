@@ -25,7 +25,6 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/advdv/connectmcp-go/pkg/runtime"
-	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -106,7 +105,13 @@ func messageSchema(md protoreflect.MessageDescriptor, opts SchemaOptions, seen m
 				oneofMembers[string(oneof.Name())] = members
 			}
 			memberSchema := fieldSchema(nestedFd, opts, seen)
-			memberSchema["description"] = fmt.Sprintf("The value when %s=%q.", DiscriminatorKey, name)
+			// The member's own description (its rules) follows the line that
+			// ties it to the discriminator.
+			which := fmt.Sprintf("The value when %s=%q.", DiscriminatorKey, name)
+			if own, _ := memberSchema["description"].(string); own != "" {
+				which += "\n" + own
+			}
+			memberSchema["description"] = which
 			members.set(name, memberSchema)
 			continue
 		}
@@ -157,11 +162,14 @@ func messageSchema(md protoreflect.MessageDescriptor, opts SchemaOptions, seen m
 		}
 	}
 
-	return map[string]any{
+	schema := map[string]any{
 		"type":       "object",
 		"properties": normalFields,
 		"required":   required,
 	}
+	// Rules across fields, (buf.validate.message), describe the message.
+	mergeConstraints(schema, ExtractValidateMessageConstraints(md))
+	return schema
 }
 
 // oneofRequired reports whether a oneof carries (buf.validate.oneof).required.
@@ -221,32 +229,29 @@ func FieldSchema(fd protoreflect.FieldDescriptor, opts SchemaOptions) map[string
 
 // fieldSchema is the internal implementation that threads the seen set for cycle detection.
 func fieldSchema(fd protoreflect.FieldDescriptor, opts SchemaOptions, seen map[protoreflect.FullName]int) map[string]any {
-	if fd.IsMap() {
-		return mapFieldSchema(fd, opts, seen)
-	}
-
 	var schema map[string]any
 
-	switch fd.Kind() {
-	case protoreflect.MessageKind:
+	switch {
+	case fd.IsMap():
+		schema = mapFieldSchema(fd, opts, seen)
+	case fd.Kind() == protoreflect.MessageKind:
 		schema = messageFieldSchema(fd, opts, seen)
-	case protoreflect.EnumKind:
+	case fd.Kind() == protoreflect.EnumKind:
 		schema = enumFieldSchema(fd)
 	default:
 		schema = scalarFieldSchema(fd)
 	}
 
-	constraints := ExtractValidateConstraints(fd)
-	for key, value := range constraints {
-		schema[key] = value
-	}
-
 	if fd.IsList() {
-		return map[string]any{
+		schema = map[string]any{
 			"type":  "array",
 			"items": schema,
 		}
 	}
+
+	// The (buf.validate.field) rules describe the field as a whole: for a
+	// list or a map they carry the rules of its items, keys and values.
+	mergeConstraints(schema, ExtractValidateConstraints(fd))
 	return schema
 }
 
@@ -363,132 +368,6 @@ func KindToType(kind protoreflect.Kind) string {
 	default:
 		return "string"
 	}
-}
-
-// IsFieldRequired checks if a field has the REQUIRED field behavior annotation.
-func IsFieldRequired(fd protoreflect.FieldDescriptor) bool {
-	if proto.HasExtension(fd.Options(), annotations.E_FieldBehavior) {
-		behaviors := proto.GetExtension(fd.Options(), annotations.E_FieldBehavior).([]annotations.FieldBehavior)
-		for _, behavior := range behaviors {
-			if behavior == annotations.FieldBehavior_REQUIRED {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// ExtractValidateConstraints reads buf.validate constraints from a field
-// and returns corresponding JSON Schema constraint keywords.
-func ExtractValidateConstraints(fd protoreflect.FieldDescriptor) map[string]any {
-	constraints := make(map[string]any)
-
-	if !proto.HasExtension(fd.Options(), validate.E_Field) {
-		return constraints
-	}
-
-	fieldConstraints := proto.GetExtension(fd.Options(), validate.E_Field).(*validate.FieldRules)
-	if fieldConstraints == nil {
-		return constraints
-	}
-
-	if stringRules := fieldConstraints.GetString(); stringRules != nil {
-		if stringRules.GetUuid() {
-			constraints["format"] = "uuid"
-		}
-		if stringRules.GetEmail() {
-			constraints["format"] = "email"
-		}
-		if pattern := stringRules.GetPattern(); pattern != "" {
-			constraints["pattern"] = pattern
-		}
-		if stringRules.HasMinLen() {
-			constraints["minLength"] = int(stringRules.GetMinLen())
-		}
-		if stringRules.HasMaxLen() {
-			constraints["maxLength"] = int(stringRules.GetMaxLen())
-		}
-	}
-
-	if int32Rules := fieldConstraints.GetInt32(); int32Rules != nil {
-		if int32Rules.HasGt() {
-			constraints["minimum"] = int(int32Rules.GetGt()) + 1
-		} else if int32Rules.HasGte() {
-			constraints["minimum"] = int(int32Rules.GetGte())
-		}
-		if int32Rules.HasLt() {
-			constraints["maximum"] = int(int32Rules.GetLt()) - 1
-		} else if int32Rules.HasLte() {
-			constraints["maximum"] = int(int32Rules.GetLte())
-		}
-	}
-
-	if int64Rules := fieldConstraints.GetInt64(); int64Rules != nil {
-		if int64Rules.HasGt() {
-			constraints["minimum"] = int(int64Rules.GetGt()) + 1
-		} else if int64Rules.HasGte() {
-			constraints["minimum"] = int(int64Rules.GetGte())
-		}
-		if int64Rules.HasLt() {
-			constraints["maximum"] = int(int64Rules.GetLt()) - 1
-		} else if int64Rules.HasLte() {
-			constraints["maximum"] = int(int64Rules.GetLte())
-		}
-	}
-
-	if uint32Rules := fieldConstraints.GetUint32(); uint32Rules != nil {
-		if uint32Rules.HasGt() {
-			constraints["minimum"] = int(uint32Rules.GetGt()) + 1
-		} else if uint32Rules.HasGte() {
-			constraints["minimum"] = int(uint32Rules.GetGte())
-		}
-		if uint32Rules.HasLt() {
-			constraints["maximum"] = int(uint32Rules.GetLt()) - 1
-		} else if uint32Rules.HasLte() {
-			constraints["maximum"] = int(uint32Rules.GetLte())
-		}
-	}
-
-	if uint64Rules := fieldConstraints.GetUint64(); uint64Rules != nil {
-		if uint64Rules.HasGt() {
-			constraints["minimum"] = int(uint64Rules.GetGt()) + 1
-		} else if uint64Rules.HasGte() {
-			constraints["minimum"] = int(uint64Rules.GetGte())
-		}
-		if uint64Rules.HasLt() {
-			constraints["maximum"] = int(uint64Rules.GetLt()) - 1
-		} else if uint64Rules.HasLte() {
-			constraints["maximum"] = int(uint64Rules.GetLte())
-		}
-	}
-
-	if floatRules := fieldConstraints.GetFloat(); floatRules != nil {
-		if floatRules.HasGt() {
-			constraints["exclusiveMinimum"] = float64(floatRules.GetGt())
-		} else if floatRules.HasGte() {
-			constraints["minimum"] = float64(floatRules.GetGte())
-		}
-		if floatRules.HasLt() {
-			constraints["exclusiveMaximum"] = float64(floatRules.GetLt())
-		} else if floatRules.HasLte() {
-			constraints["maximum"] = float64(floatRules.GetLte())
-		}
-	}
-
-	if doubleRules := fieldConstraints.GetDouble(); doubleRules != nil {
-		if doubleRules.HasGt() {
-			constraints["exclusiveMinimum"] = doubleRules.GetGt()
-		} else if doubleRules.HasGte() {
-			constraints["minimum"] = doubleRules.GetGte()
-		}
-		if doubleRules.HasLt() {
-			constraints["exclusiveMaximum"] = doubleRules.GetLt()
-		} else if doubleRules.HasLte() {
-			constraints["maximum"] = doubleRules.GetLte()
-		}
-	}
-
-	return constraints
 }
 
 // CleanComment removes tool-specific comment prefixes (buf:lint, @ignore-comment).

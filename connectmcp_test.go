@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
 	"github.com/advdv/connectmcp-go"
@@ -20,6 +21,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -362,6 +364,33 @@ func createItemWith(t *testing.T, mutate func(*descriptorpb.MethodOptions)) prot
 	return fd.Services().ByName("TestService").Methods().ByName("CreateItem")
 }
 
+// createItemWithUndecodableRule returns the CreateItem method with a request
+// whose "name" field carries a (buf.validate) rule this binary cannot decode:
+// a predefined rule, an extension of buf.validate.StringRules, that no linked
+// package declares.
+func createItemWithUndecodableRule(t *testing.T) protoreflect.MethodDescriptor {
+	t.Helper()
+	rules := &validate.StringRules{}
+	rules.ProtoReflect().SetUnknown(protowire.AppendVarint(protowire.AppendTag(nil, 9999, protowire.VarintType), 1))
+
+	fdp := protodesc.ToFileDescriptorProto(testdata.File_testdata_test_service_proto)
+	for _, message := range fdp.GetMessageType() {
+		if message.GetName() != "CreateItemRequest" {
+			continue
+		}
+		for _, field := range message.GetField() {
+			if field.GetName() == "name" {
+				proto.SetExtension(field.Options, validate.E_Field, validate.FieldRules_builder{String: rules}.Build())
+			}
+		}
+	}
+	fd, err := protodesc.NewFile(fdp, protoregistry.GlobalFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return fd.Services().ByName("TestService").Methods().ByName("CreateItem")
+}
+
 func TestRegister_Errors(t *testing.T) {
 	createItem := testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("CreateItem")
 	method := func(procedure string, streamType connect.StreamType, schema any) connect.Method {
@@ -406,6 +435,11 @@ func TestRegister_Errors(t *testing.T) {
 				})),
 			},
 			want: "/a.B/C: (connectmcp.v1.tool_name): invalid tool name",
+		},
+		"undecodable validation rule": {
+			methods: []connect.Method{method("/a.B/C", connect.StreamTypeUnary, createItemWithUndecodableRule(t))},
+			want: "/a.B/C: testdata.CreateItemRequest.name: (buf.validate.field) has rules that cannot be decoded " +
+				"(unknown fields in buf.validate.StringRules)",
 		},
 		"duplicate tool name": {
 			methods: []connect.Method{

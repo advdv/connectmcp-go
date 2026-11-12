@@ -43,6 +43,8 @@ func allSchemas(t *testing.T) map[string]map[string]any {
 	files := []protoreflect.FileDescriptor{
 		(&testdata.CreateItemRequest{}).ProtoReflect().Descriptor().ParentFile(),
 		(&testdata.DeepNestingRequest{}).ProtoReflect().Descriptor().ParentFile(),
+		// Schemas with every kind of (buf.validate) rule.
+		testdata.File_testdata_validation_proto,
 	}
 	out := map[string]map[string]any{}
 	for _, f := range files {

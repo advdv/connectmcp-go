@@ -764,9 +764,9 @@ var File_testdata_test_service_proto protoreflect.FileDescriptor
 
 const file_testdata_test_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1btestdata/test_service.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fconnectmcp/v1/annotations.proto\"\x8a\x03\n" +
-	"\x11CreateItemRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
+	"\x1btestdata/test_service.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fconnectmcp/v1/annotations.proto\"\x8b\x03\n" +
+	"\x11CreateItemRequest\x12\x18\n" +
+	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x12?\n" +
 	"\x06labels\x18\x03 \x03(\v2'.testdata.CreateItemRequest.LabelsEntryR\x06labels\x12\x12\n" +
 	"\x04tags\x18\x04 \x03(\tR\x04tags\x124\n" +

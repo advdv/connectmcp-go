@@ -249,3 +249,52 @@ func TestConformance_WellKnownTypes(t *testing.T) {
 		}
 	})
 }
+
+// TestConformance_ValidationRules checks that what (buf.validate) rules add to
+// a schema reaches the model. The prompt gives a bare workspace ID and plain
+// words for the priority; the "workspaces/" prefix of the parent is only in
+// the schema, as a predefined rule in the description and as an example.
+func TestConformance_ValidationRules(t *testing.T) {
+	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
+		args := callTool(t, m, testTool("ReservationService", "CreateReservation"),
+			"Reserve 8 seats for 'Quarterly planning' in the workspace with ID "+
+				"01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d, from 2030-01-01T10:00:00Z to 2030-01-01T11:00:00Z, "+
+				"with high priority. Invite a@example.com and b@example.com.")
+		var req testdata.CreateReservationRequest
+		decodeInto(t, args, &req)
+
+		if got, want := req.GetParent(), "workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"; got != want {
+			t.Errorf("parent = %q, want %q (args: %s)", got, want, args)
+		}
+		if req.GetTitle() != "Quarterly planning" || req.GetSeats() != 8 {
+			t.Errorf("title = %q, seats = %d (args: %s)", req.GetTitle(), req.GetSeats(), args)
+		}
+		if req.GetPriority() != testdata.Urgency_URGENCY_HIGH {
+			t.Errorf("priority = %v, want URGENCY_HIGH (args: %s)", req.GetPriority(), args)
+		}
+		if len(req.GetAttendees()) != 2 {
+			t.Errorf("attendees = %v, want two (args: %s)", req.GetAttendees(), args)
+		}
+		if !req.GetEndTime().AsTime().After(req.GetStartTime().AsTime()) {
+			t.Errorf("end_time is not after start_time (args: %s)", args)
+		}
+	})
+}
+
+// TestConformance_ValidationRuleSchemasAccepted submits a schema with every
+// kind of (buf.validate) rule to each provider: const, enum, examples,
+// formats, bounds, the rules of items, keys and values, and descriptions. A
+// provider that rejects a keyword fails the request.
+func TestConformance_ValidationRuleSchemasAccepted(t *testing.T) {
+	for _, method := range []string{
+		"Strings", "Numerics", "Scalars", "Enums", "Collections", "WellKnowns", "Cels", "Modifiers",
+	} {
+		t.Run(method, func(t *testing.T) {
+			runOnAllProviders(t, func(t *testing.T, m llm.Model) {
+				tool := testTool("RuleCasesService", method)
+				tool.Description = "Records the given values."
+				callTool(t, m, tool, "Call the tool once. Fill in a few fields with values that satisfy the schema.")
+			})
+		})
+	}
+}

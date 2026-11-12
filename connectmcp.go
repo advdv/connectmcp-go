@@ -172,6 +172,8 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 //   - an (connectmcp.v1.tool_name) option is set to an invalid name;
 //   - an (connectmcp.v1.tool_annotations) option contradicts the idempotency_level
 //     option (destructive_hint true on a NO_SIDE_EFFECTS method);
+//   - a request or response message has a (buf.validate) rule this binary
+//     cannot decode (see gen.CheckValidateRules);
 //   - two tools end up with the same name.
 func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error {
 	config := newConfig(opts)
@@ -211,6 +213,12 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 
 		if _, err := gen.ToolAnnotationsForMethod(method); err != nil {
 			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_annotations): %w", spec.Procedure, err)
+		}
+
+		for _, message := range []protoreflect.MessageDescriptor{method.Input(), method.Output()} {
+			if err := gen.CheckValidateRules(message); err != nil {
+				return fmt.Errorf("connectmcp: %s: %w", spec.Procedure, err)
+			}
 		}
 
 		def := gen.ToolForMethod(method, description)

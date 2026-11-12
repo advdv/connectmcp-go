@@ -1,0 +1,582 @@
+// Protos that exercise how (buf.validate) rules reach the JSON schema of a
+// tool: as JSON Schema keywords where one exists, and as a line in the
+// property's description otherwise.
+syntax = "proto3";
+
+package testdata;
+
+import "buf/validate/validate.proto";
+import "connectmcp/v1/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "testdata/predefined_rules.proto";
+
+// ReservationService is a realistic service whose request combines most
+// kinds of rules.
+service ReservationService {
+  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse) {
+    option (connectmcp.v1.tool_description) = "Reserve seats in a workspace.";
+  }
+}
+
+// RuleCasesService has one method per message with one field per kind of
+// rule. The methods are not tools (no tool_description); the conformance
+// tests submit their schemas to the LLM providers.
+service RuleCasesService {
+  rpc Strings(StringRulesCases) returns (RuleCasesResponse);
+  rpc Numerics(NumericRulesCases) returns (RuleCasesResponse);
+  rpc Scalars(ScalarRulesCases) returns (RuleCasesResponse);
+  rpc Enums(EnumRulesCases) returns (RuleCasesResponse);
+  rpc Collections(CollectionRulesCases) returns (RuleCasesResponse);
+  rpc WellKnowns(WellKnownRulesCases) returns (RuleCasesResponse);
+  rpc Cels(CelRulesCases) returns (RuleCasesResponse);
+  rpc Modifiers(ModifierRulesCases) returns (RuleCasesResponse);
+}
+
+message RuleCasesResponse {}
+
+enum Urgency {
+  URGENCY_UNSPECIFIED = 0;
+  URGENCY_LOW = 1;
+  URGENCY_NORMAL = 2;
+  URGENCY_HIGH = 3;
+}
+
+message CreateReservationRequest {
+  option (buf.validate.message).cel = {
+    id: "reservation.end_after_start"
+    message: "end_time must be after start_time"
+    expression: "this.end_time > this.start_time"
+  };
+
+  // The workspace to book in.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.(testdata.uuid_name) = "workspaces",
+    (buf.validate.field).string.example = "workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"
+  ];
+
+  // Shown on the calendar.
+  string title = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 120
+      example: "Quarterly planning"
+    }
+  ];
+
+  // Number of seats.
+  optional int32 seats = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 50
+    example: 8
+  }];
+
+  google.protobuf.Timestamp start_time = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).timestamp.gt_now = true
+  ];
+
+  google.protobuf.Timestamp end_time = 5 [(google.api.field_behavior) = REQUIRED];
+
+  // Email addresses of the people to invite.
+  repeated string attendees = 6 [(buf.validate.field).repeated = {
+    max_items: 20
+    unique: true
+    items: {
+      string: {email: true}
+    }
+  }];
+
+  map<string, string> labels = 7 [(buf.validate.field).map = {
+    max_pairs: 8
+    keys: {
+      string: {pattern: "^[a-z][a-z0-9_]{0,30}$"}
+    }
+    values: {
+      string: {max_len: 64}
+    }
+  }];
+
+  Urgency priority = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+message CreateReservationResponse {
+  string name = 1 [(buf.validate.field).string.example = "reservations/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"];
+}
+
+// StringRulesCases has one field per kind of string rule.
+message StringRulesCases {
+  string fixed = 1 [(buf.validate.field).string.const = "fixed"];
+  string exact_len = 2 [(buf.validate.field).string.len = 5];
+  string one_of = 3 [(buf.validate.field).string = {
+    in: [
+      "a",
+      "b"
+    ]
+  }];
+  string none_of = 4 [(buf.validate.field).string = {
+    not_in: [
+      "x",
+      "y"
+    ]
+  }];
+  string affixes = 5 [(buf.validate.field).string = {
+    prefix: "pre_"
+    suffix: "_suf"
+    contains: "mid"
+    not_contains: "bad"
+  }];
+  string byte_lengths = 6 [(buf.validate.field).string = {
+    len_bytes: 4
+    min_bytes: 1
+    max_bytes: 8
+  }];
+  string hostname = 7 [(buf.validate.field).string.hostname = true];
+  string ipv4 = 8 [(buf.validate.field).string.ipv4 = true];
+  string ipv6 = 9 [(buf.validate.field).string.ipv6 = true];
+  string uri = 10 [(buf.validate.field).string.uri = true];
+  string uri_ref = 11 [(buf.validate.field).string.uri_ref = true];
+  string ip = 12 [(buf.validate.field).string.ip = true];
+  string tuuid = 13 [(buf.validate.field).string.tuuid = true];
+  string host_and_port = 14 [(buf.validate.field).string.host_and_port = true];
+  string header_name = 15 [(buf.validate.field).string = {
+    well_known_regex: KNOWN_REGEX_HTTP_HEADER_NAME
+    strict: false
+  }];
+  string ulid = 16 [(buf.validate.field).string.ulid = true];
+  string examples = 17 [(buf.validate.field).string = {
+    example: [
+      "first",
+      "second"
+    ]
+  }];
+  // disabled sets a well-known rule to false, which protovalidate does not
+  // enforce.
+  string disabled = 18 [(buf.validate.field).string.email = false];
+  string quoted = 19 [(buf.validate.field).string.prefix = "say \"hi\"\n"];
+}
+
+// NumericRulesCases covers the numeric rule messages. 64-bit integers are
+// JSON strings, so their bounds have no JSON Schema keyword.
+message NumericRulesCases {
+  int32 fixed = 1 [(buf.validate.field).int32.const = 42];
+  int32 one_of = 2 [(buf.validate.field).int32 = {
+    in: [
+      1,
+      2,
+      3
+    ]
+  }];
+  int32 none_of = 3 [(buf.validate.field).int32 = {
+    not_in: [
+      4,
+      5
+    ]
+  }];
+  sint32 signed = 4 [(buf.validate.field).sint32 = {
+    gt: -10
+    lt: 10
+  }];
+  fixed32 fixed_width = 5 [(buf.validate.field).fixed32 = {
+    gte: 1
+    lte: 9
+  }];
+  sfixed32 signed_fixed_width = 6 [(buf.validate.field).sfixed32 = {
+    gte: -5
+    lte: 5
+  }];
+  int64 big = 7 [(buf.validate.field).int64 = {
+    gte: 1
+    lte: 9007199254740993
+    example: 9007199254740993
+  }];
+  uint64 big_fixed = 8 [(buf.validate.field).uint64.const = 18446744073709551615];
+  sint64 big_one_of = 9 [(buf.validate.field).sint64 = {
+    in: [
+      -1,
+      1
+    ]
+  }];
+  fixed64 big_none_of = 10 [(buf.validate.field).fixed64 = {
+    not_in: [0]
+  }];
+  sfixed64 big_bound = 11 [(buf.validate.field).sfixed64.lt = 0];
+  float ratio = 12 [(buf.validate.field).float = {
+    gt: 0
+    lte: 0.1
+    finite: true
+    example: 0.05
+  }];
+  double fixed_double = 13 [(buf.validate.field).double.const = 1.5];
+  double one_of_double = 14 [(buf.validate.field).double = {
+    in: [
+      0.25,
+      0.5
+    ]
+  }];
+  // outside has lt below gt, which protovalidate reads as "outside the
+  // range": greater than 10 or less than 5.
+  int32 outside = 15 [(buf.validate.field).int32 = {
+    gt: 10
+    lt: 5
+  }];
+  double outside_double = 16 [(buf.validate.field).double = {
+    gte: 10
+    lte: 5
+  }];
+  // exactly has equal inclusive bounds.
+  int32 exactly = 17 [(buf.validate.field).int32 = {
+    gte: 7
+    lte: 7
+  }];
+  double not_finite = 18 [(buf.validate.field).double = {
+    lt: inf
+    example: [
+      nan,
+      inf,
+      -inf,
+      1
+    ]
+  }];
+  uint32 unsigned = 19 [(buf.validate.field).uint32 = {
+    gt: 0
+    lt: 4294967295
+    example: 7
+  }];
+}
+
+// ScalarRulesCases covers bool and bytes rules.
+message ScalarRulesCases {
+  bool accepted = 1 [(buf.validate.field).bool = {
+    const: true
+    example: true
+  }];
+  bytes fixed = 2 [(buf.validate.field).bytes.const = "hi"];
+  bytes sized = 3 [(buf.validate.field).bytes = {
+    len: 16
+    min_len: 1
+    max_len: 32
+  }];
+  bytes affixes = 4 [(buf.validate.field).bytes = {
+    prefix: "\x01\x02"
+    suffix: "\x03"
+    contains: "\x04"
+    pattern: "^[a-z]+$"
+  }];
+  bytes one_of = 5 [(buf.validate.field).bytes = {
+    in: [
+      "a",
+      "b"
+    ]
+    example: "a"
+  }];
+  bytes address = 6 [(buf.validate.field).bytes.ip = true];
+}
+
+// EnumRulesCases covers enum rules, which narrow the listed enum values.
+message EnumRulesCases {
+  Urgency fixed = 1 [(buf.validate.field).enum.const = 2];
+  Urgency one_of = 2 [(buf.validate.field).enum = {
+    in: [
+      1,
+      3
+    ]
+  }];
+  Urgency none_of = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  Urgency defined = 4 [(buf.validate.field).enum.defined_only = true];
+  Urgency combined = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    in: [
+      1,
+      2,
+      3
+    ]
+    not_in: [3]
+    example: 2
+  }];
+  repeated Urgency list = 6 [(buf.validate.field).repeated.items.enum = {
+    not_in: [0]
+  }];
+  map<string, Urgency> by_name = 7 [(buf.validate.field).map.values.enum = {
+    in: [
+      2,
+      3
+    ]
+  }];
+  // impossible excludes every value, so the enum is left alone.
+  Urgency impossible = 8 [(buf.validate.field).enum = {
+    in: [1]
+    not_in: [1]
+  }];
+  // undefined refers to a number without a name.
+  Urgency undefined = 9 [(buf.validate.field).enum = {
+    in: [
+      1,
+      99
+    ]
+    example: [
+      99,
+      1
+    ]
+  }];
+}
+
+// CollectionRulesCases covers repeated and map rules, including the rules
+// of their items, keys and values.
+message CollectionRulesCases {
+  repeated string emails = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 3
+    unique: true
+    items: {
+      string: {
+        email: true
+        min_len: 3
+        example: "a@example.com"
+      }
+    }
+  }];
+  repeated int64 big_numbers = 2 [(buf.validate.field).repeated.items.int64.gt = 0];
+  map<string, string> labels = 3 [(buf.validate.field).map = {
+    min_pairs: 1
+    max_pairs: 4
+    keys: {
+      string: {
+        pattern: "^[a-z]+$"
+        max_len: 10
+      }
+    }
+    values: {
+      string: {max_len: 64}
+    }
+  }];
+  map<int32, string> by_number = 4 [(buf.validate.field).map.keys.int32 = {
+    gt: 0
+    in: [
+      1,
+      2
+    ]
+  }];
+  map<bool, string> by_flag = 5 [(buf.validate.field).map.keys.bool.const = true];
+  repeated Item items = 6 [(buf.validate.field).repeated = {
+    max_items: 2
+    items: {
+      cel: {
+        id: "item.named"
+        message: "every item must have a name"
+        expression: "this.name != ''"
+      }
+    }
+  }];
+  map<string, Item> items_by_id = 7 [(buf.validate.field).map.values.cel = {
+    id: "item.identified"
+    message: "every item must have an id"
+    expression: "this.id != ''"
+  }];
+  // not_unique sets unique to false.
+  repeated string not_unique = 8 [(buf.validate.field).repeated.unique = false];
+
+  message Item {
+    string id = 1;
+    string name = 2;
+  }
+}
+
+// WellKnownRulesCases covers the rules of well-known types.
+message WellKnownRulesCases {
+  google.protobuf.Timestamp future = 1 [(buf.validate.field).timestamp.gt_now = true];
+  google.protobuf.Timestamp recent = 2 [(buf.validate.field).timestamp = {
+    lt_now: true
+    within: {seconds: 3600}
+  }];
+  google.protobuf.Timestamp bounded = 3 [(buf.validate.field).timestamp = {
+    gte: {seconds: 1700000000}
+    lt: {seconds: 1800000000}
+    example: {seconds: 1750000000}
+  }];
+  google.protobuf.Duration timeout = 4 [(buf.validate.field).duration = {
+    gt: {}
+    lte: {seconds: 300}
+    example: {
+      seconds: 1
+      nanos: 500000000
+    }
+  }];
+  google.protobuf.Duration fixed_timeout = 5 [(buf.validate.field).duration = {
+    in: [
+      {seconds: 1},
+      {seconds: 60}
+    ]
+  }];
+  google.protobuf.FieldMask empty_mask = 6 [(buf.validate.field).field_mask.const = {}];
+  google.protobuf.FieldMask fixed_mask = 7 [(buf.validate.field).field_mask.const = {
+    paths: [
+      "display_name",
+      "labels"
+    ]
+  }];
+  google.protobuf.FieldMask mask = 8 [(buf.validate.field).field_mask = {
+    in: [
+      "display_name",
+      "labels"
+    ]
+    example: {
+      paths: ["display_name"]
+    }
+  }];
+  google.protobuf.Any detail = 9 [(buf.validate.field).any = {
+    in: ["type.googleapis.com/google.protobuf.Duration"]
+    not_in: ["type.googleapis.com/google.protobuf.Timestamp"]
+  }];
+  google.protobuf.Int32Value wrapped_number = 10 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 5
+  }];
+  google.protobuf.StringValue wrapped_string = 11 [(buf.validate.field).string.max_len = 8];
+  google.protobuf.Int64Value wrapped_big = 12 [(buf.validate.field).int64.gte = 1];
+}
+
+// CelRulesCases covers CEL rules: on the message, on a field, and predefined
+// rules declared in predefined_rules.proto.
+message CelRulesCases {
+  option (buf.validate.message) = {
+    cel: {
+      id: "cases.ordered"
+      message: "low must not exceed high"
+      expression: "this.low <= this.high"
+    }
+    cel: {
+      id: "cases.returns_message"
+      expression: "this.low >= 0 ? '' : 'low must not be negative'"
+    }
+    cel_expression: "this.high < 1000"
+    oneof: {
+      fields: [
+        "low",
+        "high"
+      ]
+      required: true
+    }
+    oneof: {
+      fields: [
+        "name",
+        "slug"
+      ]
+    }
+  };
+
+  int32 low = 1;
+  int32 high = 2;
+
+  string name = 3 [(buf.validate.field).string.(testdata.uuid_name) = "workspaces"];
+  string slug = 4 [(buf.validate.field).string.(testdata.slug) = true];
+  int32 step = 5 [(buf.validate.field).int32 = {
+    gte: 0
+    [testdata.multiple_of_any]: [
+      5,
+      7
+    ]
+  }];
+  string undocumented = 6 [(buf.validate.field).string.(testdata.undocumented) = 3];
+
+  string with_message = 7 [(buf.validate.field).cel = {
+    id: "field.with_message"
+    message: "value must not be \"root\""
+    expression: "this != 'root'"
+  }];
+  string without_message = 8 [(buf.validate.field).cel = {
+    id: "field.without_message"
+    expression: "this != 'admin' ? '' : 'value must not be admin'"
+  }];
+  string only_id = 9 [(buf.validate.field).cel = {id: "field.only_id"}];
+  string bare_expression = 10 [(buf.validate.field).cel_expression = "this.size() % 2 == 0"];
+  string several = 11 [
+    (buf.validate.field).string.max_len = 20,
+    (buf.validate.field).string.prefix = "x-",
+    (buf.validate.field).string.(testdata.slug) = true,
+    (buf.validate.field).cel = {
+      id: "several.first"
+      message: "first"
+      expression: "true"
+    },
+    (buf.validate.field).cel = {
+      id: "several.second"
+      message: "second"
+      expression: "true"
+    }
+  ];
+
+  // nested is a message field with its own rule, on a message that has
+  // rules itself.
+  Nested nested = 12 [(buf.validate.field).cel = {
+    id: "nested.name_required"
+    message: "nested.name is required"
+    expression: "this.name != ''"
+  }];
+
+  message Nested {
+    option (buf.validate.message).cel = {
+      id: "nested.consistent"
+      message: "name and alias must differ"
+      expression: "this.name != this.alias"
+    };
+
+    string name = 1;
+    string alias = 2;
+  }
+}
+
+// ModifierRulesCases covers required and ignore, which change when the other
+// rules apply.
+message ModifierRulesCases {
+  string must_set = 1 [(buf.validate.field).required = true];
+  string behavior_required = 2 [(google.api.field_behavior) = REQUIRED];
+  string if_set = 3 [
+    (buf.validate.field).string.min_len = 3,
+    (buf.validate.field).string.prefix = "x-",
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  string never = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 3,
+    (buf.validate.field).string.prefix = "x-",
+    (buf.validate.field).string.example = "x-ample",
+    (buf.validate.field).cel = {
+      id: "never.checked"
+      message: "never checked"
+      expression: "false"
+    },
+    (buf.validate.field).ignore = IGNORE_ALWAYS
+  ];
+  // only_ignore has an ignore mode and nothing to ignore.
+  string only_ignore = 5 [(buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE];
+  string plain = 6;
+
+  oneof choice {
+    option (buf.validate.oneof).required = true;
+    string by_name = 7 [(buf.validate.field).string = {
+      prefix: "names/"
+      max_len: 40
+    }];
+    int32 by_number = 8;
+  }
+
+  // A recursive field hits the depth limit and becomes a JSON string; its
+  // rules are added to that placeholder.
+  ModifierRulesCases child = 9 [(buf.validate.field).cel = {
+    id: "child.plain"
+    message: "child must be plain"
+    expression: "this.plain != ''"
+  }];
+}

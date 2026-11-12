@@ -313,9 +313,9 @@ const file_testdata_compatibility_test_proto_rawDesc = "" +
 	"!testdata/compatibility_test.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a google/protobuf/field_mask.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/api/field_behavior.proto\",\n" +
 	"\vTestMessage\x12\x1d\n" +
 	"\n" +
-	"some_bytes\x18\x01 \x01(\fR\tsomeBytes\"?\n" +
-	"\x11RequiredFieldTest\x12*\n" +
-	"\x0erequired_field\x18\r \x01(\tB\x03\xe0A\x02R\rrequiredField\"\xca\x05\n" +
+	"some_bytes\x18\x01 \x01(\fR\tsomeBytes\"@\n" +
+	"\x11RequiredFieldTest\x12+\n" +
+	"\x0erequired_field\x18\r \x01(\tB\x04\xe2A\x01\x02R\rrequiredField\"\xca\x05\n" +
 	"\x0eWktTestMessage\x128\n" +
 	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x125\n" +
 	"\bduration\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\bduration\x12:\n" +

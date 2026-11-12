@@ -322,9 +322,8 @@ func TestExtractValidateConstraints_NumericTypes(t *testing.T) {
 			g.Expect(c["maximum"]).To(Equal(1000))
 		}},
 		{"big_count", func(g Gomega, c map[string]any) {
-			// uint64 gt=0
-			g.Expect(c["minimum"]).To(Equal(1))
-			g.Expect(c).ToNot(HaveKey("maximum"))
+			// uint64 gt=0: a JSON string, so described instead of minimum
+			g.Expect(c).To(Equal(map[string]any{"description": `Rules: uint64.gt = "0"`}))
 		}},
 		{"percentage", func(g Gomega, c map[string]any) {
 			// float gte=0.0, lte=100.0
@@ -337,9 +336,8 @@ func TestExtractValidateConstraints_NumericTypes(t *testing.T) {
 			g.Expect(c["exclusiveMaximum"]).To(BeNumerically("~", 1000000.0))
 		}},
 		{"timestamp_nanos", func(g Gomega, c map[string]any) {
-			// int64 gte=0
-			g.Expect(c["minimum"]).To(Equal(0))
-			g.Expect(c).ToNot(HaveKey("maximum"))
+			// int64 gte=0: a JSON string, so described instead of minimum
+			g.Expect(c).To(Equal(map[string]any{"description": `Rules: int64.gte = "0"`}))
 		}},
 		{"code", func(g Gomega, c map[string]any) {
 			// string min_len=2, max_len=10, pattern

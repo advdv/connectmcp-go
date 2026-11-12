@@ -1,0 +1,41 @@
+// Predefined protovalidate rules, as a consumer of protovalidate declares
+// them: extensions of the buf.validate rule messages. Extending a message
+// that is not an options message needs proto2 (or editions), hence this
+// separate file.
+syntax = "proto2";
+
+package testdata;
+
+import "buf/validate/validate.proto";
+
+extend buf.validate.StringRules {
+  // uuid_name requires a resource name "<rule>/<uuid>". The effective
+  // pattern depends on the value of the rule.
+  optional string uuid_name = 1001 [(buf.validate.predefined).cel = {
+    id: "string.uuid_name"
+    message: "value must be a resource name with a UUID in lower case as its ID"
+    expression: "this.matches('^' + rule + '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')"
+  }];
+
+  // slug has no static message: its expression returns the error text.
+  optional bool slug = 1002 [(buf.validate.predefined).cel = {
+    id: "string.slug"
+    expression: "this.matches('^[a-z0-9-]+$') ? '' : 'value must be a slug'"
+  }];
+
+  // undocumented carries no (buf.validate.predefined) option at all.
+  optional int32 undocumented = 1003;
+}
+
+extend buf.validate.Int32Rules {
+  // multiple_of_any takes a list and has two CEL rules.
+  repeated int32 multiple_of_any = 1001 [(buf.validate.predefined).cel = {
+    id: "int32.multiple_of_any"
+    message: "value must be a multiple of one of the given numbers"
+    expression: "rule.exists(n, this % n == 0)"
+  }, (buf.validate.predefined).cel = {
+    id: "int32.multiple_of_any.positive"
+    message: "value must be positive"
+    expression: "this > 0"
+  }];
+}

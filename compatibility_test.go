@@ -557,9 +557,11 @@ func TestNumericValidationConstraints(t *testing.T) {
 	g.Expect(count["minimum"]).To(Equal(1))
 	g.Expect(count["maximum"]).To(Equal(1000))
 
-	// uint64 with gt (gt:0 -> minimum:1)
+	// uint64 with gt: a 64-bit integer is a JSON string, which minimum does
+	// not apply to, so the bound is described.
 	bigCount := props["big_count"].(map[string]any)
-	g.Expect(bigCount["minimum"]).To(Equal(1))
+	g.Expect(bigCount).ToNot(HaveKey("minimum"))
+	g.Expect(bigCount["description"]).To(Equal(`Rules: uint64.gt = "0"`))
 
 	// float with gte/lte
 	pct := props["percentage"].(map[string]any)
@@ -573,7 +575,8 @@ func TestNumericValidationConstraints(t *testing.T) {
 
 	// int64 with gte
 	ts := props["timestamp_nanos"].(map[string]any)
-	g.Expect(ts["minimum"]).To(Equal(0))
+	g.Expect(ts).ToNot(HaveKey("minimum"))
+	g.Expect(ts["description"]).To(Equal(`Rules: int64.gte = "0"`))
 
 	// string with multiple constraints
 	code := props["code"].(map[string]any)

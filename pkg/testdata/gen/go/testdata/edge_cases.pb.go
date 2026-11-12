@@ -1828,9 +1828,9 @@ const file_testdata_edge_cases_proto_rawDesc = "" +
 	"priorities\x18\x02 \x03(\x0e2\x12.testdata.PriorityR\n" +
 	"priorities\".\n" +
 	"\x12EnumFieldsResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe8\x01\n" +
-	"\x15MultipleOneofsRequest\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12\x12\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe9\x01\n" +
+	"\x15MultipleOneofsRequest\x12\x18\n" +
+	"\x04name\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04name\x12\x12\n" +
 	"\x03url\x18\x02 \x01(\tH\x00R\x03url\x12\x1b\n" +
 	"\braw_data\x18\x03 \x01(\fH\x00R\arawData\x12\x1d\n" +
 	"\tfile_path\x18\x04 \x01(\tH\x00R\bfilePath\x12\x19\n" +

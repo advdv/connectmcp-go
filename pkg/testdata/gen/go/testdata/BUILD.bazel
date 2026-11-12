@@ -5,9 +5,11 @@ go_library(
     srcs = [
         "compatibility_test.pb.go",
         "edge_cases.pb.go",
+        "predefined_rules.pb.go",
         "test_service.pb.go",
         "tool_annotations.pb.go",
         "tool_naming.pb.go",
+        "validation.pb.go",
     ],
     importpath = "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata",
     visibility = ["//visibility:public"],

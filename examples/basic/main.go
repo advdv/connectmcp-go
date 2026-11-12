@@ -32,6 +32,11 @@ func main() {
 	// The connect server the tool calls are dispatched to.
 	server := connect.NewServer()
 	testdataconnect.RegisterTestServiceHandler(server, &testServer{})
+	// CreateReservation's request carries (buf.validate) rules and example
+	// values, which are in the input schema of the tool (see the README).
+	// Nothing here enforces them: add a protovalidate interceptor to the
+	// connect server for that.
+	testdataconnect.RegisterReservationServiceHandler(server, &reservationServer{})
 
 	// raw is the *mcp.Server for transport setup, s is the runtime.MCPServer
 	// tools are registered on.
@@ -47,6 +52,14 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+type reservationServer struct{}
+
+func (*reservationServer) CreateReservation(context.Context, *testdata.CreateReservationRequest) (*testdata.CreateReservationResponse, error) {
+	return &testdata.CreateReservationResponse{
+		Name: "reservations/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d",
+	}, nil
 }
 
 type testServer struct{}

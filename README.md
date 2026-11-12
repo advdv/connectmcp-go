@@ -25,6 +25,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 - **connect-go v2 only.** Tool calls go through `connect.Server.Call`, so interceptors run and HTTP headers become request headers. gRPC and the mark3labs/mcp-go adapter are removed; only the official go-sdk is supported.
 - **Correctable argument errors.** Undecodable arguments are returned as an `INVALID_ARGUMENT` tool error, in the same JSON shape as any other failed call, naming the offending field (also as a `google.rpc.BadRequest` detail) and the expected shape, so the model can retry.
 - **Tool annotations.** Tools announce MCP's `readOnlyHint` and `idempotentHint` from the standard `idempotency_level` option, and a title, `destructiveHint` and `openWorldHint` from `(connectmcp.v1.tool_annotations)`, so clients can tell a read from a delete.
+- **Validation rules in the schema.** Every [protovalidate](https://buf.build/bufbuild/protovalidate) rule reaches the tool's JSON schema, found by reflection instead of a fixed list: standard rules, the rules of list items and map keys and values, predefined (custom) rules, CEL rules and example values. A rule is a JSON Schema keyword where one exists and a line in the property's `description` otherwise (upstream: string length, pattern, uuid/email and some numeric bounds; anything else was dropped silently).
 - **Request size limit.** `connectmcp.WithReadMaxBytes` limits the size of a tool call's arguments like `connecthttp.WithReadMaxBytes` limits a request message (default 4 MiB); larger arguments are a `RESOURCE_EXHAUSTED` tool error.
 - **Removed:** descriptor-only `gen.RegisterService`, extra properties, the tool name prefix and `runtime.Option` (the filter is now `connectmcp.WithToolFilter`).
 - **Module and proto.** The Go module is `github.com/advdv/connectmcp-go`, with the `connectmcp` package at its root. The annotations are `connectmcp/v1/annotations.proto` in proto package `connectmcp.v1` (upstream: `mcp.v1`, same extension numbers), with Go code in `pkg/connectmcpv1`, published to `buf.build/advdv/connectmcp` on each release.
@@ -36,6 +37,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 - Tools are selected and described with a proto option
 - Tool annotations (read-only, idempotent, destructive, title) from `idempotency_level` and a proto option
 - JSON Schema for tool inputs and outputs derived from the request and response messages
+- [protovalidate](https://buf.build/bufbuild/protovalidate) rules and example values in those schemas, custom and CEL rules included
 - Tool calls can be forwarded to a remote connect server
 - Built on [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK)
 
@@ -81,7 +83,7 @@ mux.Handle("/mcp", mcpHandler)  // the annotated RPCs as MCP tools
 - Every tool call is dispatched with `server.Call`, so the server's interceptors (auth, validation, tracing) run for tool calls exactly as they do for RPCs.
 - The headers of the HTTP request carrying a tool call are the RPC's request headers (`CallInfo.RequestHeader()`), and `CallInfo.Protocol` is `"mcp"`.
 - `NewHandler` reads the methods registered at the time of the call, so register the services first.
-- `NewHandler` returns an error if no method is annotated, a description is empty, an annotated method is streaming, a configured tool name is invalid, a tool annotation contradicts `idempotency_level`, or two tools share a name.
+- `NewHandler` returns an error if no method is annotated, a description is empty, an annotated method is streaming, a configured tool name is invalid, a tool annotation contradicts `idempotency_level`, a message has a [validation rule that cannot be decoded](#validation-rules), or two tools share a name.
 
 Options:
 
@@ -372,20 +374,56 @@ In OpenAI mode, `FixOpenAI` handles the reverse transformation at runtime: JSON-
 
 **OpenAI mode:** Oneof fields are flattened into nullable fields (e.g., `type: ["string", "null"]`) with a description noting the oneof constraint. At runtime, `FixOpenAI` strips null oneof alternatives and keeps only the first non-null field per group.
 
-### Validation constraints
+### Validation rules
 
-[buf.validate](https://buf.build/bufbuild/protovalidate) annotations are mapped to JSON Schema keywords:
+[protovalidate](https://buf.build/bufbuild/protovalidate) rules (`buf.validate`) and example values are part of the schema, so the model knows what a valid value looks like before it calls the tool. See [`examples/basic`](examples/basic/README.md) for a request with most kinds of rules and its schema.
 
-| Validation | JSON Schema |
+The rules are found by reflection over the rule messages, not from a list of supported rules, so every rule that is set is in the schema: standard rules, the rules of list items and of map keys and values, predefined rules, and CEL rules. Each rule is in one place.
+
+**A JSON Schema keyword**, when one accepts exactly what the rule accepts:
+
+| Rule | JSON Schema |
 |---|---|
-| `string.uuid` | `format: uuid` |
-| `string.email` | `format: email` |
+| `const` | `const` (64-bit integers as a string, `bytes` as base64, a `field_mask` as its string) |
+| `in` | `enum` |
+| `gte` / `lte` | `minimum` / `maximum` |
+| `gt` / `lt` on an integer | `minimum` + 1 / `maximum` - 1 |
+| `gt` / `lt` on a `float` or `double` | `exclusiveMinimum` / `exclusiveMaximum` |
+| `string.len`, `min_len`, `max_len` | `minLength` / `maxLength` |
 | `string.pattern` | `pattern` |
-| `string.min_len/max_len` | `minLength/maxLength` |
-| `int32.gte/lte` | `minimum/maximum` |
-| `int32.gt/lt` | `minimum+1 / maximum-1` |
-| `float.gt/lt` | `exclusiveMinimum/exclusiveMaximum` |
-| `double.gte/lte` | `minimum/maximum` |
+| `string.email`, `hostname`, `ipv4`, `ipv6`, `uri`, `uri_ref`, `uuid` | `format` |
+| `enum.const`, `in`, `not_in` | the listed `enum` names are narrowed to the allowed ones |
+| `repeated.min_items`, `max_items` | `minItems` / `maxItems` |
+| `repeated.items` | the same mapping, in `items` |
+| `map.min_pairs`, `max_pairs` | `minProperties` / `maxProperties` |
+| `map.keys`, `map.values` | the same mapping, in `propertyNames` / `additionalProperties` |
+| `example` | `examples` |
+| `(buf.validate.field).required` | the field is in the parent's `required`, like `(google.api.field_behavior) = REQUIRED` |
+
+**A line in the `description`** for every other rule, after `Rules:`. A standard rule is written as its name and value, with the value in its JSON form:
+
+```json
+{"type": "string", "description": "Rules:\n- string.prefix = \"x-\"\n- string.not_in = [\"x-admin\"]"}
+{"type": ["string", "null"], "format": "date-time", "description": "Rules: timestamp.gt_now"}
+```
+
+This is also where a rule goes when a keyword would be wrong: the bounds of a 64-bit integer or a numeric map key (JSON strings, which `minimum` does not apply to), and bounds that protovalidate reads as "outside the range" (`gt: 10, lt: 5`). `repeated.unique` is described too, because OpenAI rejects a tool schema with `uniqueItems`.
+
+**CEL rules** are described by their `message`. A rule without one computes its message in the expression, so the expression is shown instead:
+
+- `(buf.validate.field).cel` and `cel_expression` are lines in the description of the field;
+- `(buf.validate.message).cel`, `cel_expression` and `oneof` are lines in the description of the message, which for the request itself is the description of the input schema;
+- a predefined rule, an extension of a rule message that you declare with `(buf.validate.predefined)`, is its name and value followed by the messages of its CEL rules: `uuid_name = "workspaces": value must be a resource name with a UUID in lower case as its ID`.
+
+**Modifiers.** With `ignore = IGNORE_IF_ZERO_VALUE` the keywords are kept and the description says that the rules are skipped when the value is unset or zero. With `IGNORE_ALWAYS` only the examples are kept.
+
+Three things to know:
+
+- The schema informs, it does not enforce: tool arguments are not validated against it. Add a protovalidate interceptor to the connect server; its violations reach the model as an `INVALID_ARGUMENT` tool error.
+- Descriptions cost tokens in every `tools/list`. Rules with a keyword add no description, and a field without rules adds nothing.
+- A rule that the binary cannot decode is a registration error instead of a gap in the schema. That is a predefined rule whose Go package is not linked into the binary, or a rule newer than the protovalidate Go module (`buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go`) in your `go.mod`.
+
+Field comments are not in the schema: the descriptors compiled into a Go binary do not carry them.
 
 ### Recursive messages
 

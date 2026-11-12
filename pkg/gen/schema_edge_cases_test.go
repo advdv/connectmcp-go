@@ -230,7 +230,8 @@ func TestExtractValidateConstraints_UUIDAndEmail(t *testing.T) {
 		fd := md.Fields().ByName("timestamp")
 		g.Expect(fd).ToNot(BeNil())
 		constraints := ExtractValidateConstraints(fd)
-		g.Expect(constraints["minimum"]).To(Equal(1)) // gt=0 -> minimum=1
+		// gt=0 on an int64, a JSON string: described instead of minimum.
+		g.Expect(constraints).To(Equal(map[string]any{"description": `Rules: int64.gt = "0"`}))
 	})
 }
 

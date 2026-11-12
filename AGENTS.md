@@ -26,6 +26,7 @@ just gazelle              # Sync BUILD files from go.mod
 connectmcp.go               Package connectmcp (//:connectmcp-go), THE entry point: NewHandler (http.Handler) and Register, on a *connect.Server
 pkg/gen/                    Core library:
   schema.go                 JSON schema generation from protoreflect descriptors
+  validate.go               (buf.validate) rules -> JSON Schema keywords and description lines
   toolname.go               Tool names and the (connectmcp.v1.*) method options
 pkg/runtime/                MCPServer interface, argument decoding, error handling (connect v2 errors)
   server.go                 MCPServer interface + Tool/CallToolRequest/CallToolResult types
@@ -99,6 +100,17 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   `title`, `destructive_hint`, `open_world_hint`; `destructive_hint: true` on `NO_SIDE_EFFECTS` is a
   `Register` error (`gen.ToolAnnotationsForMethod`). `connectmcp.WithToolAnnotations` adjusts them in
   code, unchecked. The gosdk adapter sends the title as `Tool.title` and `annotations.title`.
+- Validation rules (`pkg/gen/validate.go`): `gen.ExtractValidateConstraints` walks the
+  `(buf.validate.field)` rules by reflection, so no rule needs code to be found (standard, list items,
+  map keys/values, predefined extensions, CEL, `example`). A rule becomes a JSON Schema keyword only
+  when the keyword accepts exactly what the rule accepts (`ruleTarget.keyword`, a table keyed by rule
+  name); otherwise it is a line in the property's `description` ("Rules: string.prefix = ..."; a CEL
+  rule by its message, or its expression when it has none). Hence no `minimum` for 64-bit integers and
+  map keys (JSON strings), and no `uniqueItems`, which OpenAI rejects (conformance tests). `(buf.validate.message)` rules describe the message
+  (`gen.ExtractValidateMessageConstraints`); `(buf.validate.field).required` counts in
+  `gen.IsFieldRequired`. Nothing validates arguments against the schema. A rule that arrives as unknown
+  fields (unlinked predefined rule, newer protovalidate) is a `Register` error
+  (`gen.CheckValidateRules`), never a silent gap. Field comments are not in the schema.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
 - `pkg/gen` works with any protoreflect descriptor
 - Tool registration is MCP-library-agnostic via the runtime.MCPServer interface; runtime/gosdk
@@ -120,6 +132,8 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   connect E2E) live in the root `*_test.go` files; `testsupport_test.go` holds their wiring
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`
 - Tool annotations: `annotations_test.go` on `tool_annotations.proto` (WorkspaceService)
+- Validation rules: `pkg/gen/validate_test.go` on `validation.proto` (one field per kind of rule) and
+  `predefined_rules.proto` (predefined rules; proto2, as extending a rule message requires)
 - Fuzz tests: `pkg/runtime/decode_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`
 
 ## Proto Generation

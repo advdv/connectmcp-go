@@ -3,7 +3,7 @@ module github.com/advdv/connectmcp-go
 go 1.26.1
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250912141014-52f32327d4b0.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260825204119-511051f7f437.1
 	connectrpc.com/connect/v2 v2.0.2
 	github.com/google/go-cmp v0.7.0
 	github.com/modelcontextprotocol/go-sdk v1.4.1
