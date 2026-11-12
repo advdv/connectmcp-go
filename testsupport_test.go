@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/connectmcp-go/pkg/gen"
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go/pkg/toolschema"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -18,7 +18,7 @@ import (
 // registerTestService registers srv on a fresh connect server and exposes its
 // annotated methods as tools on s. srv may be a service implementation or a
 // generated connect client, which forwards.
-func registerTestService(t *testing.T, s runtime.MCPServer, srv testdataconnect.TestServiceHandler, opts ...Option) {
+func registerTestService(t *testing.T, s mcpserver.MCPServer, srv testdataconnect.TestServiceHandler, opts ...Option) {
 	t.Helper()
 	server := connect.NewServer()
 	testdataconnect.RegisterTestServiceHandler(server, srv)
@@ -28,27 +28,27 @@ func registerTestService(t *testing.T, s runtime.MCPServer, srv testdataconnect.
 }
 
 // testServiceTool returns the tool definition of a TestService method.
-func testServiceTool(method string) runtime.Tool {
+func testServiceTool(method string) mcpserver.Tool {
 	md := testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName(protoreflect.Name(method))
-	description, _ := gen.ConfiguredToolDescription(md)
-	return gen.ToolForMethod(md, description)
+	description, _ := toolschema.ConfiguredToolDescription(md)
+	return toolschema.ToolForMethod(md, description)
 }
 
 // FileGenerator gives the schema tests their original entry points into the
-// schema generation in pkg/gen.
+// schema generation in pkg/toolschema.
 type FileGenerator struct{}
 
 func (*FileGenerator) messageSchema(md protoreflect.MessageDescriptor) map[string]any {
-	return gen.MessageSchema(md, gen.SchemaOptions{})
+	return toolschema.MessageSchema(md, toolschema.SchemaOptions{})
 }
 
 func (*FileGenerator) getType(fd protoreflect.FieldDescriptor) map[string]any {
-	return gen.FieldSchema(fd, gen.SchemaOptions{})
+	return toolschema.FieldSchema(fd, toolschema.SchemaOptions{})
 }
 
 var (
-	kindToType          = gen.KindToType
-	cleanComment        = gen.CleanComment
-	MangleHeadIfTooLong = gen.MangleHeadIfTooLong
-	Base36String        = gen.Base36String
+	kindToType          = toolschema.KindToType
+	cleanComment        = toolschema.CleanComment
+	MangleHeadIfTooLong = toolschema.MangleHeadIfTooLong
+	Base36String        = toolschema.Base36String
 )

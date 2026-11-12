@@ -17,7 +17,7 @@
 // Package conformancetest submits the generated MCP tool schemas to real LLM
 // providers through ai-sdk-go (the production calling path) and asserts that
 // the schema is accepted (no 400) and that the model fills it correctly, which
-// round-trips back into the proto through the runtime decode transform.
+// round-trips back into the proto through the toolcodec decode transform.
 //
 // These tests are nightly and non-blocking. They are gated behind the
 // `external_llm` build tag AND per-provider API-key presence, so a normal
@@ -30,8 +30,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/toolcodec"
 	"github.com/redpanda-data/ai-sdk-go/llm"
 	"github.com/redpanda-data/ai-sdk-go/providers/anthropic"
 	"github.com/redpanda-data/ai-sdk-go/providers/google"
@@ -119,7 +120,7 @@ func runOnAllProviders(t *testing.T, fn func(t *testing.T, m llm.Model)) {
 // callTool submits the tool to the model with ToolChoice=required. A nil error
 // proves the provider accepted the input_schema (the original bug surfaced as a
 // 400 here). It returns the raw arguments of the first tool call.
-func callTool(t *testing.T, m llm.Model, tool runtime.Tool, prompt string) json.RawMessage {
+func callTool(t *testing.T, m llm.Model, tool mcpserver.Tool, prompt string) json.RawMessage {
 	t.Helper()
 	resp, err := m.Generate(context.Background(), &llm.Request{
 		Messages: []llm.Message{llm.NewMessage(llm.RoleUser, llm.NewTextPart(prompt))},
@@ -150,7 +151,7 @@ func decodeInto(t *testing.T, args json.RawMessage, msg proto.Message) {
 	if err := json.Unmarshal(args, &m); err != nil {
 		t.Fatalf("unmarshal args: %v", err)
 	}
-	if err := runtime.DecodeArguments(msg.ProtoReflect().Descriptor(), m); err != nil {
+	if err := toolcodec.DecodeArguments(msg.ProtoReflect().Descriptor(), m); err != nil {
 		t.Fatalf("DecodeArguments: %v (args: %s)", err, args)
 	}
 	b, err := json.Marshal(m)
@@ -225,7 +226,7 @@ func TestConformance_RecursiveOneof(t *testing.T) {
 // TestConformance_WellKnownTypes exercises dynamic well-known types
 // (google.protobuf.Struct and google.protobuf.Value). OpenAI and Anthropic both
 // reject the open-ended native schema, so the ai-sdk-go adapters downgrade those
-// nodes to a JSON-encoded string; the runtime decode then parses them back. This
+// nodes to a JSON-encoded string; the toolcodec decode then parses them back. This
 // proves that round-trip works on every provider, including the Gemini path
 // where the schema is not downgraded.
 func TestConformance_WellKnownTypes(t *testing.T) {

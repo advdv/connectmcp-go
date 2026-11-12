@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/gen"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/toolschema"
 	"github.com/redpanda-data/ai-sdk-go/providers/anthropic"
 	"github.com/redpanda-data/ai-sdk-go/providers/google"
 	"github.com/redpanda-data/ai-sdk-go/providers/openai"
@@ -52,7 +52,7 @@ func allSchemas(t *testing.T) map[string]map[string]any {
 			sd := f.Services().Get(i)
 			for j := 0; j < sd.Methods().Len(); j++ {
 				method := sd.Methods().Get(j)
-				tool := gen.ToolForMethod(method, "")
+				tool := toolschema.ToolForMethod(method, "")
 				for kind, raw := range map[string]json.RawMessage{
 					"in":  tool.RawInputSchema,
 					"out": tool.RawOutputSchema,

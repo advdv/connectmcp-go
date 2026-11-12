@@ -8,16 +8,16 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/runtime"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Server is a runtime.MCPServer whose tools can be exercised with
+// Server is a mcpserver.MCPServer whose tools can be exercised with
 // HandleMessage. Requests travel through a real go-sdk client session over an
 // in-memory transport, so they see exactly what an MCP client would.
 type Server struct {
-	runtime.MCPServer
+	mcpserver.MCPServer
 
 	tb      testing.TB
 	raw     *mcp.Server

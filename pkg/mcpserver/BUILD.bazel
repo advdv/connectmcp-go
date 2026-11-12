@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "mcpserver",
+    srcs = ["server.go"],
+    importpath = "github.com/advdv/connectmcp-go/pkg/mcpserver",
+    visibility = ["//visibility:public"],
+)

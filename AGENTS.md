@@ -25,13 +25,13 @@ just gazelle              # Sync BUILD files from go.mod
 ```
 connectmcp.go               Package connectmcp (//:connectmcp-go), THE entry point: NewHandler (http.Handler) and Register, on a *connect.Server
 transport.go                NewTransport: a connect.Transport that calls the tools of a served server, for generated clients
-pkg/gen/                    Core library:
-  schema.go                 JSON schema generation from protoreflect descriptors
+pkg/toolschema/             Tool definitions from protoreflect descriptors:
+  schema.go                 JSON schema generation
   validate.go               (buf.validate) rules -> JSON Schema keywords and description lines
   toolname.go               Tool names and the (connectmcp.v1.*) method and field options
-pkg/runtime/                MCPServer interface, argument decoding, error handling (connect v2 errors)
-  server.go                 MCPServer interface + Tool/CallToolRequest/CallToolResult types
-  gosdk/                    Adapter: modelcontextprotocol/go-sdk -> runtime.MCPServer
+pkg/toolcodec/              Wire encodings, each with its inverse: arguments, results, tool errors (connect v2 errors)
+pkg/mcpserver/              MCPServer interface + Tool/CallToolRequest/CallToolResult types
+  gosdk/                    Adapter: modelcontextprotocol/go-sdk -> mcpserver.MCPServer
 pkg/connectmcpv1/           Generated Go for proto/connectmcp/v1/annotations.proto
 proto/                      The annotations proto, published to the BSR
 pkg/testdata/               Test protos + generated pb/connect code
@@ -63,15 +63,15 @@ h, err := connectmcp.NewHandler(server,             // http.Handler, streamable 
 
 ### Registering on an MCP server you own (stdio, prompts, resources)
 ```go
-raw, s := gosdk.NewServer("name", "1.0")    // s is runtime.MCPServer
+raw, s := gosdk.NewServer("name", "1.0")    // s is mcpserver.MCPServer
 err := connectmcp.Register(s, server)
 raw.Run(ctx, &mcp.StdioTransport{})
 ```
 
 ### Schema generation (library use)
 ```go
-schema := gen.MessageSchema(msgDescriptor, gen.SchemaOptions{})
-tool := gen.ToolForMethod(methodDescriptor, "description")
+schema := toolschema.MessageSchema(msgDescriptor, toolschema.SchemaOptions{})
+tool := toolschema.ToolForMethod(methodDescriptor, "description")
 ```
 
 ## Key Design Decisions
@@ -86,20 +86,20 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   the handler's request message, so interceptors always run. HTTP request headers become the RPC's
   request headers; `CallInfo.Protocol` is "mcp".
 - Undecodable arguments are an `INVALID_ARGUMENT` tool error in the same JSON shape as every other
-  failed call (`runtime.HandleError`), with a `google.rpc.BadRequest` detail when one field is to blame
+  failed call (`toolcodec.HandleError`), with a `google.rpc.BadRequest` detail when one field is to blame
   (named as in the input schema). Interceptors see that same error; the client gets it regardless of
   how interceptors rewrite it, so the model always learns what to fix.
 - `WithReadMaxBytes` (default 4 MiB, 0 = unlimited) limits the raw JSON of the tool arguments, checked
   in `Receive` before decoding, with connecthttp's `RESOURCE_EXHAUSTED` "message is larger than
   configured max N" error, which, like an argument error, the client gets whatever interceptors do.
-  `runtime.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`. It limits the message,
+  `mcpserver.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`. It limits the message,
   not the HTTP body that go-sdk reads in full.
 - Forwarding to a remote: register a generated connect client as the handler on a connect server.
 - `connectmcp.NewTransport` is the client side of `NewHandler` (like `connecthttp.NewTransport`): one
   lazily opened go-sdk session over streamable HTTP, ended by `Close`. Every server-side encoding has
-  its inverse in `pkg/runtime`, and the transport only composes them: arguments are
-  `runtime.EncodeMessage` (the schema's shape, never validated), results `runtime.DecodeResult`,
-  tool errors `runtime.ParseError` (remote, nothing inferred; malformed is `INTERNAL`). Change an
+  its inverse in `pkg/toolcodec`, and the transport only composes them: arguments are
+  `toolcodec.EncodeMessage` (the schema's shape, never validated), results `toolcodec.DecodeResult`,
+  tool errors `toolcodec.ParseError` (remote, nothing inferred; malformed is `INTERNAL`). Change an
   encoding and its inverse together. The call's `CallInfo.RequestHeader()` is added to the HTTP
   request of that tool call only (a RoundTripper reading the request context; the session is opened
   on a context without values), never replacing headers the MCP client set. A call without a tool
@@ -108,32 +108,32 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   (`NO_SIDE_EFFECTS` -> read-only, idempotent, not destructive; `IDEMPOTENT` -> idempotent), never set
   in the mcp option, so side effects have one source of truth. `(connectmcp.v1.tool_annotations)` adds
   `title`, `destructive_hint`, `open_world_hint`; `destructive_hint: true` on `NO_SIDE_EFFECTS` is a
-  `Register` error (`gen.ToolAnnotationsForMethod`). `connectmcp.WithToolAnnotations` adjusts them in
+  `Register` error (`toolschema.ToolAnnotationsForMethod`). `connectmcp.WithToolAnnotations` adjusts them in
   code, unchecked. The gosdk adapter sends the title as `Tool.title` and `annotations.title`.
 - Text written for the model is always a `connectmcp.v1` option, never a comment and never another
   project's annotation: `tool_description` for a tool, `field_description` for a field
-  (`gen.ConfiguredFieldDescription`), which becomes the `description` of the field's property in input
+  (`toolschema.ConfiguredFieldDescription`), which becomes the `description` of the field's property in input
   and output schemas, ahead of any generated description (placeholder, well-known type) and of the
   rules. There is no message option: the tool description covers the request, a field description
   covers a nested message where it is used. Semantics come from standard options
   (`idempotency_level`, `google.api.field_behavior`, `buf.validate`).
-- Validation rules (`pkg/gen/validate.go`): `gen.ExtractValidateConstraints` walks the
+- Validation rules (`pkg/toolschema/validate.go`): `toolschema.ExtractValidateConstraints` walks the
   `(buf.validate.field)` rules by reflection, so no rule needs code to be found (standard, list items,
   map keys/values, predefined extensions, CEL, `example`). A rule becomes a JSON Schema keyword only
   when the keyword accepts exactly what the rule accepts (`ruleTarget.keyword`, a table keyed by rule
   name); otherwise it is a line in the property's `description` ("Rules: string.prefix = ..."; a CEL
   rule by its message, or its expression when it has none). Hence no `minimum` for 64-bit integers and
   map keys (JSON strings), and no `uniqueItems`, which OpenAI rejects (conformance tests). `(buf.validate.message)` rules describe the message
-  (`gen.ExtractValidateMessageConstraints`); `(buf.validate.field).required` counts in
-  `gen.IsFieldRequired`. Nothing validates arguments against the schema. A rule that arrives as unknown
+  (`toolschema.ExtractValidateMessageConstraints`); `(buf.validate.field).required` counts in
+  `toolschema.IsFieldRequired`. Nothing validates arguments against the schema. A rule that arrives as unknown
   fields (unlinked predefined rule, newer protovalidate) is a `Register` error
-  (`gen.CheckValidateRules`), never a silent gap.
+  (`toolschema.CheckValidateRules`), never a silent gap.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
-- `pkg/gen` works with any protoreflect descriptor
-- Tool registration is MCP-library-agnostic via the runtime.MCPServer interface; runtime/gosdk
+- `pkg/toolschema` works with any protoreflect descriptor
+- Tool registration is MCP-library-agnostic via the mcpserver.MCPServer interface; mcpserver/gosdk
   bridges to the official MCP go-sdk
 - Connect-only, no gRPC
-- `runtime.HandleError` maps an error to a JSON tool error revealing exactly what connect-go's transports
+- `toolcodec.HandleError` maps an error to a JSON tool error revealing exactly what connect-go's transports
   put on the wire (`scrubHandlerError` in connecthttp): a local `*connect.Error` keeps its code,
   `Message()` and details (wrapping text and causes are dropped); a remote one is `INTERNAL`, context
   errors are `CANCELED`/`DEADLINE_EXCEEDED`, anything else `UNKNOWN`, all without a message. Forwarding
@@ -146,15 +146,15 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
 - connectmcp API (HTTP handler incl. stateless JSON, header forwarding, registration errors):
   `connectmcp_test.go` (repo root)
 - Client transport: `transport_test.go` (generated clients through `NewTransport` into `NewHandler`
-  over HTTP); inverse encodings in `pkg/runtime/transform_test.go` and `error_test.go`
+  over HTTP); inverse encodings in `pkg/toolcodec/transform_test.go` and `error_test.go`
 - Behavioral tests inherited from the codegen era (schemas, round trips, tool filter,
   connect E2E) live in the root `*_test.go` files; `testsupport_test.go` holds their wiring
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`
 - Tool annotations: `annotations_test.go` on `tool_annotations.proto` (WorkspaceService)
-- Field descriptions: `pkg/gen/field_description_test.go` on `field_descriptions.proto`
-- Validation rules: `pkg/gen/validate_test.go` on `validation.proto` (one field per kind of rule) and
+- Field descriptions: `pkg/toolschema/field_description_test.go` on `field_descriptions.proto`
+- Validation rules: `pkg/toolschema/validate_test.go` on `validation.proto` (one field per kind of rule) and
   `predefined_rules.proto` (predefined rules; proto2, as extending a rule message requires)
-- Fuzz tests: `pkg/runtime/decode_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`
+- Fuzz tests: `pkg/toolcodec/decode_fuzz_test.go`, `pkg/toolschema/schema_fuzz_test.go`
 
 ## Proto Generation
 

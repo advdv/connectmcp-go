@@ -15,7 +15,7 @@ import (
 	"connectrpc.com/connect/v2/connectproto"
 	"github.com/advdv/connectmcp-go"
 	"github.com/advdv/connectmcp-go/pkg/connectmcpv1"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -189,7 +189,7 @@ func inMemorySession(t *testing.T, mcpServer *mcp.Server) *mcp.ClientSession {
 	return session
 }
 
-// toolError is the JSON every failed tool call returns, see runtime.HandleError.
+// toolError is the JSON every failed tool call returns, see toolcodec.HandleError.
 type toolError struct {
 	Code    string           `json:"code"`
 	Message string           `json:"message"`

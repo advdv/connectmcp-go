@@ -10,10 +10,11 @@ go_test(
     ],
     deps = [
         "//:connectmcp-go",
-        "//pkg/gen",
-        "//pkg/runtime",
+        "//pkg/mcpserver",
         "//pkg/testdata/gen/go/testdata",
         "//pkg/testdata/gen/go/testdata/testdataconnect",
+        "//pkg/toolcodec",
+        "//pkg/toolschema",
         "@com_connectrpc_connect_v2//:connect",
         "@com_github_redpanda_data_ai_sdk_go//llm",
         "@com_github_redpanda_data_ai_sdk_go//providers/anthropic",

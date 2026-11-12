@@ -32,7 +32,7 @@ import (
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/advdv/connectmcp-go"
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"google.golang.org/protobuf/proto"
@@ -79,7 +79,7 @@ func main() {
 
 // closedWorld sets openWorldHint to false on every tool that does not set it
 // in its (connectmcp.v1.tool_annotations) option.
-func closedWorld(_ string, _ protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations) {
+func closedWorld(_ string, _ protoreflect.MethodDescriptor, annotations *mcpserver.ToolAnnotations) {
 	if annotations.OpenWorldHint == nil {
 		annotations.OpenWorldHint = proto.Bool(false)
 	}

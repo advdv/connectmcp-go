@@ -17,10 +17,10 @@
 
 ## Migration
 
-- [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- runtime.MCPServer interface with a go-sdk adapter; the mark3labs adapter has been removed.
+- [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- mcpserver.MCPServer interface with a go-sdk adapter; the mark3labs adapter has been removed.
 - [x] **Native connect-go v2** -- connect-only (no gRPC or connect v1 forwarders).
 - [x] **Runtime only** -- the protoc plugin and generated `*.pb.mcp.go` are gone; `connectmcp` serves a `*connect.Server` from its descriptors, with tools selected by `(connectmcp.v1.tool_description)`.
-- [ ] **Rename `pkg/runtime` and `pkg/gen`** -- both names are from the codegen era and no longer say what the packages hold. Proposed, as its own breaking release: wire encodings -> `pkg/toolcodec`, `MCPServer`/`Tool` types + `gosdk` -> `pkg/mcpserver`, `pkg/gen` -> `pkg/toolschema`.
+- [x] **Rename `pkg/runtime` and `pkg/gen`** -- names from the codegen era. Now `pkg/toolcodec` (wire encodings), `pkg/mcpserver` (`MCPServer`/`Tool` types, `gosdk`) and `pkg/toolschema` (schemas, tool names, annotations).
 
 ## Bazel
 

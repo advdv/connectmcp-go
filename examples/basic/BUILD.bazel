@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//:connectmcp-go",
-        "//pkg/runtime/gosdk",
+        "//pkg/mcpserver/gosdk",
         "//pkg/testdata/gen/go/testdata",
         "//pkg/testdata/gen/go/testdata/testdataconnect",
         "@com_connectrpc_connect_v2//:connect",

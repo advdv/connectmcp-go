@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/redpanda-data/ai-sdk-go/llm"
@@ -46,12 +46,12 @@ const (
 // recordingMCPServer captures the handlers connectmcp registers, so the
 // test can drive the real production handler.
 type recordingMCPServer struct {
-	handlers map[string]runtime.ToolHandler
+	handlers map[string]mcpserver.ToolHandler
 }
 
-func (s *recordingMCPServer) AddTool(tool runtime.Tool, h runtime.ToolHandler) {
+func (s *recordingMCPServer) AddTool(tool mcpserver.Tool, h mcpserver.ToolHandler) {
 	if s.handlers == nil {
-		s.handlers = map[string]runtime.ToolHandler{}
+		s.handlers = map[string]mcpserver.ToolHandler{}
 	}
 	s.handlers[tool.Name] = h
 }
@@ -68,13 +68,13 @@ func (s *wktService) ProcessWellKnownTypes(_ context.Context, req *testdata.Proc
 	return &testdata.ProcessWellKnownTypesResponse{Success: true}, nil
 }
 
-func invokeHandler(t *testing.T, h runtime.ToolHandler, args json.RawMessage) *runtime.CallToolResult {
+func invokeHandler(t *testing.T, h mcpserver.ToolHandler, args json.RawMessage) *mcpserver.CallToolResult {
 	t.Helper()
 	var m map[string]any
 	if err := json.Unmarshal(args, &m); err != nil {
 		t.Fatalf("model sent arguments that are not a JSON object: %v (args: %s)", err, args)
 	}
-	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: args})
+	res, err := h(context.Background(), &mcpserver.CallToolRequest{Arguments: args})
 	if err != nil {
 		t.Fatalf("handler returned a protocol-level error instead of a tool result: %v", err)
 	}

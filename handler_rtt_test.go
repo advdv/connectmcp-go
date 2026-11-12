@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/advdv/connectmcp-go/internal/mcptest"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	. "github.com/onsi/gomega"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"

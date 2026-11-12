@@ -22,7 +22,7 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"github.com/advdv/connectmcp-go"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -39,7 +39,7 @@ func main() {
 	// connect server for that.
 	testdataconnect.RegisterReservationServiceHandler(server, &reservationServer{})
 
-	// raw is the *mcp.Server for transport setup, s is the runtime.MCPServer
+	// raw is the *mcp.Server for transport setup, s is the mcpserver.MCPServer
 	// tools are registered on.
 	raw, s := gosdk.NewServer("Example MCP server", "1.0.0")
 

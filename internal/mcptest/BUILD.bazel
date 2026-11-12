@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/advdv/connectmcp-go/internal/mcptest",
     visibility = ["//:__subpackages__"],
     deps = [
-        "//pkg/runtime",
-        "//pkg/runtime/gosdk",
+        "//pkg/mcpserver",
+        "//pkg/mcpserver/gosdk",
         "@com_github_modelcontextprotocol_go_sdk//mcp",
     ],
 )

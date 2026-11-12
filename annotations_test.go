@@ -8,8 +8,8 @@ import (
 	"connectrpc.com/connect/v2"
 	"github.com/advdv/connectmcp-go"
 	"github.com/advdv/connectmcp-go/pkg/connectmcpv1"
-	"github.com/advdv/connectmcp-go/pkg/runtime"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	. "github.com/onsi/gomega"
@@ -134,14 +134,14 @@ func TestWithToolAnnotations(t *testing.T) {
 
 	var seen []string
 	tools := listToolsJSON(t, server, connectmcp.WithToolAnnotations(
-		func(name string, method protoreflect.MethodDescriptor, a *runtime.ToolAnnotations) {
+		func(name string, method protoreflect.MethodDescriptor, a *mcpserver.ToolAnnotations) {
 			seen = append(seen, string(method.Name()))
 			switch name {
 			case "archive_workspace":
 				a.Title = "Archive workspace"
 				a.OpenWorldHint = proto.Bool(false)
 			case "update_workspace":
-				*a = runtime.ToolAnnotations{}
+				*a = mcpserver.ToolAnnotations{}
 			}
 		}))
 	g.Expect(seen).To(ConsistOf("GetWorkspace", "ListWorkspaces", "CreateWorkspace",

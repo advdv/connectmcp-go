@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/connectmcp-go/pkg/gen"
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/toolcodec"
+	"github.com/advdv/connectmcp-go/pkg/toolschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -42,15 +42,15 @@ type Transport struct {
 // The MCP session is opened by the first RPC and ended by Close. Each RPC is
 // one tools/call request:
 //
-//   - The tool is the one NewHandler names for the method (gen.ToolNameForMethod).
+//   - The tool is the one NewHandler names for the method (toolschema.ToolNameForMethod).
 //   - The request message is sent as the tool arguments in the shape of the
-//     tool's input schema (runtime.EncodeMessage), without validating it.
+//     tool's input schema (toolcodec.EncodeMessage), without validating it.
 //   - The request headers set on the call (connect.NewClientContext) are added
 //     to the HTTP request carrying it, so they are the request headers the
 //     server's interceptors see. Headers the MCP client sets itself, such as
 //     Content-Type, are kept.
 //   - A tool error is returned as the *connect.Error it describes, built only
-//     from the code, message and details that arrived (runtime.ParseError).
+//     from the code, message and details that arrived (toolcodec.ParseError).
 //
 // MCP carries no response headers or trailers, so those of the call stay
 // empty. Only unary RPCs can be called; others fail with CodeUnimplemented.
@@ -91,7 +91,7 @@ func (t *Transport) NewClientStream(ctx context.Context, spec connect.Spec) (con
 		return nil, connect.Errorf(connect.CodeUnimplemented, "connectmcp: %s is a %s method, only unary methods can be tools",
 			spec.Procedure, spec.StreamType)
 	}
-	return &clientStream{ctx: ctx, transport: t, tool: gen.ToolNameForMethod(method)}, nil
+	return &clientStream{ctx: ctx, transport: t, tool: toolschema.ToolNameForMethod(method)}, nil
 }
 
 // connect returns the session, opening it on first use.
@@ -161,7 +161,7 @@ func (s *clientStream) Send(msg any) error {
 	if s.result != nil {
 		return connect.NewError(connect.CodeInternal, "connectmcp: unary RPC sent more than one request message")
 	}
-	arguments, err := runtime.EncodeMessage(req)
+	arguments, err := toolcodec.EncodeMessage(req)
 	if err != nil {
 		return connect.Errorf(connect.CodeInternal, "connectmcp: encode request: %v", err)
 	}
@@ -206,7 +206,7 @@ func (s *clientStream) Receive(msg any) error {
 		if !ok {
 			return connect.Errorf(connect.CodeInternal, "connectmcp: tool %s: error result is not one text content block", s.tool)
 		}
-		cerr, err := runtime.ParseError(text)
+		cerr, err := toolcodec.ParseError(text)
 		if err != nil {
 			return connect.Errorf(connect.CodeInternal, "connectmcp: tool %s: %v", s.tool, err)
 		}
@@ -216,7 +216,7 @@ func (s *clientStream) Receive(msg any) error {
 	if err != nil {
 		return connect.Errorf(connect.CodeInternal, "connectmcp: tool %s: %v", s.tool, err)
 	}
-	if err := runtime.DecodeResult(structured, res); err != nil {
+	if err := toolcodec.DecodeResult(structured, res); err != nil {
 		return connect.Errorf(connect.CodeInternal, "connectmcp: tool %s: decode result: %v", s.tool, err)
 	}
 	return nil

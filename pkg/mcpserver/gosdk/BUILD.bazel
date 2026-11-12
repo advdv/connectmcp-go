@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "gosdk",
+    srcs = ["server.go"],
+    importpath = "github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/mcpserver",
+        "@com_github_modelcontextprotocol_go_sdk//mcp",
+    ],
+)

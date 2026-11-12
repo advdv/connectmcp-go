@@ -36,9 +36,10 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/connectmcp-go/pkg/gen"
-	"github.com/advdv/connectmcp-go/pkg/runtime"
-	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/toolcodec"
+	"github.com/advdv/connectmcp-go/pkg/toolschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -58,7 +59,7 @@ type config struct {
 	implementation mcp.Implementation
 	httpOptions    *mcp.StreamableHTTPOptions
 	toolFilter     func(toolName string) bool
-	annotate       func(toolName string, method protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations)
+	annotate       func(toolName string, method protoreflect.MethodDescriptor, annotations *mcpserver.ToolAnnotations)
 	readMaxBytes   int
 }
 
@@ -96,7 +97,7 @@ func WithToolFilter(keep func(toolName string) bool) Option {
 // hint for every tool, such as OpenWorldHint false for a service that only
 // touches its own data, or to annotate a forwarded service whose protos you do
 // not own. What annotate sets is not checked against idempotency_level.
-func WithToolAnnotations(annotate func(toolName string, method protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations)) Option {
+func WithToolAnnotations(annotate func(toolName string, method protoreflect.MethodDescriptor, annotations *mcpserver.ToolAnnotations)) Option {
 	return func(c *config) {
 		c.annotate = annotate
 	}
@@ -160,7 +161,7 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 // the official MCP go-sdk, wrap the *mcp.Server with gosdk.Wrap.
 //
 // Each tool is annotated from the method's idempotency_level and
-// (connectmcp.v1.tool_annotations) options (see gen.ToolAnnotationsForMethod), so
+// (connectmcp.v1.tool_annotations) options (see toolschema.ToolAnnotationsForMethod), so
 // clients can tell a read from a delete; WithToolAnnotations adjusts that.
 //
 // Register reads the methods registered on server at the time of the call, so
@@ -173,14 +174,14 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 //   - an (connectmcp.v1.tool_annotations) option contradicts the idempotency_level
 //     option (destructive_hint true on a NO_SIDE_EFFECTS method);
 //   - a request or response message has a (buf.validate) rule this binary
-//     cannot decode (see gen.CheckValidateRules);
+//     cannot decode (see toolschema.CheckValidateRules);
 //   - two tools end up with the same name.
-func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error {
+func Register(s mcpserver.MCPServer, server *connect.Server, opts ...Option) error {
 	config := newConfig(opts)
 
 	type tool struct {
 		spec connect.Spec
-		def  runtime.Tool
+		def  mcpserver.Tool
 	}
 	var (
 		tools     []tool
@@ -192,7 +193,7 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 		if !ok {
 			continue
 		}
-		description, ok := gen.ConfiguredToolDescription(method)
+		description, ok := toolschema.ConfiguredToolDescription(method)
 		if !ok {
 			continue
 		}
@@ -205,28 +206,28 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_description) is set on a %s method, only unary methods can be tools",
 				spec.Procedure, spec.StreamType)
 		}
-		if name, ok := gen.ConfiguredToolName(method); ok {
-			if err := gen.ValidateToolName(name); err != nil {
+		if name, ok := toolschema.ConfiguredToolName(method); ok {
+			if err := toolschema.ValidateToolName(name); err != nil {
 				return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_name): %w", spec.Procedure, err)
 			}
 		}
 
-		if _, err := gen.ToolAnnotationsForMethod(method); err != nil {
+		if _, err := toolschema.ToolAnnotationsForMethod(method); err != nil {
 			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_annotations): %w", spec.Procedure, err)
 		}
 
 		for _, message := range []protoreflect.MessageDescriptor{method.Input(), method.Output()} {
-			if err := gen.CheckValidateRules(message); err != nil {
+			if err := toolschema.CheckValidateRules(message); err != nil {
 				return fmt.Errorf("connectmcp: %s: %w", spec.Procedure, err)
 			}
 		}
 
-		def := gen.ToolForMethod(method, description)
+		def := toolschema.ToolForMethod(method, description)
 		if config.toolFilter != nil && !config.toolFilter(def.Name) {
 			continue
 		}
 		if config.annotate != nil {
-			annotations := runtime.ToolAnnotations{}
+			annotations := mcpserver.ToolAnnotations{}
 			if def.Annotations != nil {
 				annotations = *def.Annotations
 			}
@@ -254,8 +255,8 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 
 // toolHandler returns the MCP tool handler that calls the procedure of spec on
 // server, accepting arguments of at most readMaxBytes (zero: any size).
-func toolHandler(server *connect.Server, spec connect.Spec, readMaxBytes int) runtime.ToolHandler {
-	return func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
+func toolHandler(server *connect.Server, spec connect.Spec, readMaxBytes int) mcpserver.ToolHandler {
+	return func(ctx context.Context, request *mcpserver.CallToolRequest) (*mcpserver.CallToolResult, error) {
 		info := &connect.CallInfo{Spec: spec, Protocol: Protocol, Codec: "json"}
 		for key, values := range request.Header {
 			info.RequestHeader().SetValues(key, values)
@@ -269,13 +270,13 @@ func toolHandler(server *connect.Server, spec connect.Spec, readMaxBytes int) ru
 			// error the interceptors saw, in the shape of every other tool
 			// error, whatever the interceptors returned in its place: a
 			// rewritten error would hide from the model what to fix.
-			return runtime.HandleError(stream.argsErr)
+			return toolcodec.HandleError(stream.argsErr)
 		case err != nil:
-			return runtime.HandleError(err)
+			return toolcodec.HandleError(err)
 		case stream.response == nil:
 			return nil, fmt.Errorf("connectmcp: %s returned no response message", spec.Procedure)
 		}
-		return runtime.NewToolResultJSON(stream.response), nil
+		return mcpserver.NewToolResultJSON(stream.response), nil
 	}
 }
 
@@ -320,21 +321,21 @@ func (s *toolStream) Receive(msg any) error {
 	// Rewrite oneof discriminated wrappers and recursion placeholders into the
 	// protojson-native shape, then unmarshal.
 	if args != nil {
-		if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), args); err != nil {
-			return s.badArguments(&runtime.ArgumentsError{Description: err.Error()})
+		if err := toolcodec.DecodeArguments(req.ProtoReflect().Descriptor(), args); err != nil {
+			return s.badArguments(&toolcodec.ArgumentsError{Description: err.Error()})
 		}
 	}
-	if err := runtime.UnmarshalArguments(args, req); err != nil {
-		argsErr, ok := errors.AsType[*runtime.ArgumentsError](err)
+	if err := toolcodec.UnmarshalArguments(args, req); err != nil {
+		argsErr, ok := errors.AsType[*toolcodec.ArgumentsError](err)
 		if !ok {
-			argsErr = &runtime.ArgumentsError{Description: err.Error()}
+			argsErr = &toolcodec.ArgumentsError{Description: err.Error()}
 		}
 		return s.badArguments(argsErr)
 	}
 	return nil
 }
 
-func (s *toolStream) badArguments(err *runtime.ArgumentsError) error {
+func (s *toolStream) badArguments(err *toolcodec.ArgumentsError) error {
 	s.argsErr = err.ConnectError()
 	return s.argsErr
 }
@@ -349,7 +350,7 @@ func (s *toolStream) Send(msg any) error {
 	if !ok {
 		return connect.NewError(connect.CodeInternal, fmt.Sprintf("connectmcp: response message %T is not a proto.Message", msg))
 	}
-	encoded, err := runtime.EncodeMessage(resp)
+	encoded, err := toolcodec.EncodeMessage(resp)
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, fmt.Sprintf("connectmcp: encode response: %v", err))
 	}

@@ -3,17 +3,17 @@ package connectmcp
 import (
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	. "github.com/onsi/gomega"
 )
 
 // recordingServer captures registered tools so tests can assert which tools
 // made it past the filter.
 type recordingServer struct {
-	tools []runtime.Tool
+	tools []mcpserver.Tool
 }
 
-func (r *recordingServer) AddTool(tool runtime.Tool, _ runtime.ToolHandler) {
+func (r *recordingServer) AddTool(tool mcpserver.Tool, _ mcpserver.ToolHandler) {
 	r.tools = append(r.tools, tool)
 }
 

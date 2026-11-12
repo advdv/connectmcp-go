@@ -124,10 +124,10 @@ See [`examples/connect`](examples/connect) for a runnable version.
 
 ### Other transports, prompts and resources
 
-`NewHandler` is a convenience around `connectmcp.Register`, which adds the tools to an MCP server you own. Use it to serve over stdio or to add prompts and resources. It programs against the one-method `runtime.MCPServer` interface; the `gosdk` package adapts the official go-sdk server to it:
+`NewHandler` is a convenience around `connectmcp.Register`, which adds the tools to an MCP server you own. Use it to serve over stdio or to add prompts and resources. It programs against the one-method `mcpserver.MCPServer` interface; the `gosdk` package adapts the official go-sdk server to it:
 
 ```go
-// raw is *mcp.Server for transport, s is runtime.MCPServer for tools.
+// raw is *mcp.Server for transport, s is mcpserver.MCPServer for tools.
 raw, s := gosdk.NewServer("my-server", "1.0.0")
 
 err := connectmcp.Register(s, server)
@@ -207,7 +207,7 @@ for name, transport := range map[string]connect.Transport{
 
 The request message is sent as tool arguments in the shape of the tool's input schema, without validating it. A tool error comes back as a remote `*connect.Error` built only from the code, message and details that arrived. Request headers set on a call (`connect.NewClientContext`) are sent with the HTTP request of that call. MCP has no response headers or trailers, and only unary RPCs can be called.
 
-To do the same over an MCP session you own, `runtime.EncodeMessage`, `runtime.DecodeResult` and `runtime.ParseError` are the encodings the transport uses.
+To do the same over an MCP session you own, `toolcodec.EncodeMessage`, `toolcodec.DecodeResult` and `toolcodec.ParseError` are the encodings the transport uses.
 
 ### Request size limit
 
@@ -287,7 +287,7 @@ To set annotations in code, for example a default for every tool or for a forwar
 ```go
 connectmcp.NewHandler(server,
     // Every tool works on this service's data only, unless its proto says otherwise.
-    connectmcp.WithToolAnnotations(func(_ string, _ protoreflect.MethodDescriptor, a *runtime.ToolAnnotations) {
+    connectmcp.WithToolAnnotations(func(_ string, _ protoreflect.MethodDescriptor, a *mcpserver.ToolAnnotations) {
         if a.OpenWorldHint == nil {
             a.OpenWorldHint = proto.Bool(false)
         }

@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	. "github.com/onsi/gomega"
@@ -31,15 +31,15 @@ const doubleEncodedStructArgs = `{"config":"\"verbose\"",` +
 	`"metadata":"\"{\\\"environment\\\": \\\"production\\\", \\\"replicas\\\": 3}\"",` +
 	`"timestamp":"2026-01-02T03:04:05Z"}`
 
-// handlerRecorder is a runtime.MCPServer that captures the registered tool
+// handlerRecorder is a mcpserver.MCPServer that captures the registered tool
 // handlers so tests can call them directly.
 type handlerRecorder struct {
-	handlers map[string]runtime.ToolHandler
+	handlers map[string]mcpserver.ToolHandler
 }
 
-func (r *handlerRecorder) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
+func (r *handlerRecorder) AddTool(tool mcpserver.Tool, handler mcpserver.ToolHandler) {
 	if r.handlers == nil {
-		r.handlers = map[string]runtime.ToolHandler{}
+		r.handlers = map[string]mcpserver.ToolHandler{}
 	}
 	r.handlers[tool.Name] = handler
 }
@@ -55,9 +55,9 @@ func (s *wktServer) ProcessWellKnownTypes(context.Context, *testdata.ProcessWell
 	return &testdata.ProcessWellKnownTypesResponse{Success: true}, nil
 }
 
-func callWithJSON(g *WithT, h runtime.ToolHandler, args string) *runtime.CallToolResult {
+func callWithJSON(g *WithT, h mcpserver.ToolHandler, args string) *mcpserver.CallToolResult {
 	g.Expect(json.Valid([]byte(args))).To(BeTrue())
-	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: json.RawMessage(args)})
+	res, err := h(context.Background(), &mcpserver.CallToolRequest{Arguments: json.RawMessage(args)})
 	// Bad arguments must never surface as a protocol-level error: the model
 	// would not see it and could not correct itself.
 	g.Expect(err).ToNot(HaveOccurred())
@@ -65,7 +65,7 @@ func callWithJSON(g *WithT, h runtime.ToolHandler, args string) *runtime.CallToo
 	return res
 }
 
-func expectModelReadableArgumentError(g *WithT, res *runtime.CallToolResult) {
+func expectModelReadableArgumentError(g *WithT, res *mcpserver.CallToolResult) {
 	g.Expect(res.IsError).To(BeTrue())
 	var toolErr struct {
 		Code    string `json:"code"`
