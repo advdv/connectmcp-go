@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"connectrpc.com/connect/v2"
 	"github.com/advdv/connectmcp-go/pkg/toolcodec"
@@ -136,8 +137,16 @@ func (rt callHeaders) RoundTrip(req *http.Request) (*http.Response, error) {
 	if base == nil {
 		base = http.DefaultTransport
 	}
-	return base.RoundTrip(req)
+	resp, err := base.RoundTrip(req)
+	if status, ok := req.Context().Value(callStatusKey{}).(*atomic.Int32); ok && err == nil {
+		status.Store(int32(resp.StatusCode))
+	}
+	return resp, err
 }
+
+// callStatusKey is the context key of the *atomic.Int32 that receives the
+// HTTP status answering a tool call's request.
+type callStatusKey struct{}
 
 // clientStream is the connect.ClientStream of one tool call.
 type clientStream struct {
@@ -145,6 +154,8 @@ type clientStream struct {
 	transport *Transport
 	tool      string
 
+	// status is the HTTP status that answered the tool call's request.
+	status   atomic.Int32
 	result   *mcp.CallToolResult
 	received bool
 }
@@ -169,7 +180,8 @@ func (s *clientStream) Send(msg any) error {
 	if err != nil {
 		return s.callError(err)
 	}
-	s.result, err = session.CallTool(s.ctx, &mcp.CallToolParams{Name: s.tool, Arguments: arguments})
+	ctx := context.WithValue(s.ctx, callStatusKey{}, &s.status)
+	s.result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: s.tool, Arguments: arguments})
 	if err != nil {
 		return s.callError(err)
 	}
@@ -180,6 +192,10 @@ func (s *clientStream) Send(msg any) error {
 func (s *clientStream) callError(err error) error {
 	code := connect.CodeUnavailable
 	switch ctxErr := s.ctx.Err(); {
+	case s.status.Load() == http.StatusRequestEntityTooLarge:
+		// The request body was over the server's limit (see WithReadMaxBytes):
+		// the code of a request message that is too large on any transport.
+		code = connect.CodeResourceExhausted
 	case errors.Is(ctxErr, context.Canceled):
 		code = connect.CodeCanceled
 	case errors.Is(ctxErr, context.DeadlineExceeded):

@@ -92,8 +92,14 @@ tool := toolschema.ToolForMethod(methodDescriptor, "description")
 - `WithReadMaxBytes` (default 4 MiB, 0 = unlimited) limits the raw JSON of the tool arguments, checked
   in `Receive` before decoding, with connecthttp's `RESOURCE_EXHAUSTED` "message is larger than
   configured max N" error, which, like an argument error, the client gets whatever interceptors do.
-  `mcpserver.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`. It limits the message,
-  not the HTTP body that go-sdk reads in full.
+  `mcpserver.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`.
+- `NewHandler` bounds the HTTP body with that one limit, like connecthttp and vanguard: go-sdk's
+  `MaxRequestBodyBytes` is set to the limit plus `EnvelopeMaxBytes` (64 KiB, the JSON-RPC envelope),
+  or to unlimited when the limit is 0, unless the caller set it in `WithStreamableHTTPOptions`. The
+  headroom keeps arguments just over the limit a `RESOURCE_EXHAUSTED` tool error; a body over it is
+  go-sdk's HTTP 413, which `NewTransport` maps to `RESOURCE_EXHAUSTED` (status recorded by its
+  RoundTripper). Never leave go-sdk's own 4 MiB default in place: it equals `DefaultReadMaxBytes`
+  and would cap a raised limit. `Register` does not own the transport and bounds only the arguments.
 - Forwarding to a remote: register a generated connect client as the handler on a connect server.
 - `connectmcp.NewTransport` is the client side of `NewHandler` (like `connecthttp.NewTransport`): one
   lazily opened go-sdk session over streamable HTTP, ended by `Close`. Every server-side encoding has
@@ -103,7 +109,8 @@ tool := toolschema.ToolForMethod(methodDescriptor, "description")
   encoding and its inverse together. The call's `CallInfo.RequestHeader()` is added to the HTTP
   request of that tool call only (a RoundTripper reading the request context; the session is opened
   on a context without values), never replacing headers the MCP client set. A call without a tool
-  result (unknown tool, transport failure) is `UNAVAILABLE`, or the context's code.
+  result (unknown tool, transport failure) is `UNAVAILABLE`, or the context's code; HTTP 413 is
+  `RESOURCE_EXHAUSTED`.
 - Tool annotations: `readOnlyHint`/`idempotentHint` are derived from the standard `idempotency_level`
   (`NO_SIDE_EFFECTS` -> read-only, idempotent, not destructive; `IDEMPOTENT` -> idempotent), never set
   in the mcp option, so side effects have one source of truth. `(connectmcp.v1.tool_annotations)` adds

@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 
 	"connectrpc.com/connect/v2"
@@ -51,6 +52,12 @@ const Protocol = "mcp"
 // DefaultReadMaxBytes is the default limit on the size of a tool call's
 // arguments, matching connecthttp's default limit on a request message.
 const DefaultReadMaxBytes = 4 * 1024 * 1024 // 4 MiB
+
+// EnvelopeMaxBytes is the room NewHandler gives an HTTP request body on top of
+// the WithReadMaxBytes limit, for the JSON-RPC envelope around a tool call's
+// arguments: the method, the request ID, the tool name and the request
+// metadata (_meta), which is a few hundred bytes from a typical client.
+const EnvelopeMaxBytes = 64 * 1024 // 64 KiB
 
 // Option configures NewHandler and Register.
 type Option func(*config)
@@ -75,6 +82,9 @@ func WithServerInfo(name, version string) Option {
 // WithStreamableHTTPOptions sets the options of the streamable HTTP transport
 // created by NewHandler, for example to serve statelessly or with plain JSON
 // responses. It has no effect on Register.
+//
+// A zero MaxRequestBodyBytes is derived from WithReadMaxBytes rather than
+// being go-sdk's default; set it to override that.
 func WithStreamableHTTPOptions(options *mcp.StreamableHTTPOptions) Option {
 	return func(c *config) {
 		c.httpOptions = options
@@ -114,10 +124,16 @@ func WithToolAnnotations(annotate func(toolName string, method protoreflect.Meth
 // configured max N"), so interceptors see it. The client gets that error as a
 // tool error even when an interceptor rewrites it.
 //
-// The limit does not cover the JSON-RPC envelope or the HTTP request body,
-// which the MCP transport reads in full before the tool is called. To bound
-// those too, wrap the handler with net/http.MaxBytesHandler at a limit with
-// headroom above n.
+// NewHandler also bounds what it reads from an HTTP request with this limit:
+// a request body may be n bytes plus EnvelopeMaxBytes for the JSON-RPC
+// envelope around the arguments, and zero allows a body of any size. A larger
+// body is not read to its end and is answered with HTTP 413, which no
+// interceptor sees. To choose the body limit yourself, set MaxRequestBodyBytes
+// in WithStreamableHTTPOptions.
+//
+// Register cannot bound the body, which is read by the transport of the MCP
+// server the caller owns. Note that go-sdk's streamable HTTP handler has a
+// body limit of its own (4 MiB by default) that arguments must also fit in.
 func WithReadMaxBytes(n int) Option {
 	return func(c *config) {
 		c.readMaxBytes = n
@@ -138,6 +154,9 @@ func newConfig(opts []Option) config {
 // NewHandler returns an http.Handler that serves the tools of server over
 // MCP's streamable HTTP transport.
 //
+// The handler reads at most the WithReadMaxBytes limit plus EnvelopeMaxBytes
+// from a request body, by default 4 MiB + 64 KiB.
+//
 // The headers of the HTTP request carrying a tool call are the request headers
 // of the RPC, so header-based authentication written for connect keeps
 // working.
@@ -152,7 +171,25 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 	if err := Register(gosdk.Wrap(mcpServer), server, opts...); err != nil {
 		return nil, err
 	}
-	return mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return mcpServer }, config.httpOptions), nil
+	return mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return mcpServer }, config.streamableHTTPOptions()), nil
+}
+
+// streamableHTTPOptions returns the configured transport options with, unless
+// the caller set one, a request body limit that admits arguments of
+// readMaxBytes and their envelope: any arguments the body limit lets through
+// that are too large still fail as a RESOURCE_EXHAUSTED tool error.
+func (c config) streamableHTTPOptions() *mcp.StreamableHTTPOptions {
+	var options mcp.StreamableHTTPOptions
+	if c.httpOptions != nil {
+		options = *c.httpOptions
+	}
+	if options.MaxRequestBodyBytes == 0 {
+		options.MaxRequestBodyBytes = -1 // go-sdk: no limit
+		if c.readMaxBytes > 0 && int64(c.readMaxBytes) <= math.MaxInt64-EnvelopeMaxBytes {
+			options.MaxRequestBodyBytes = int64(c.readMaxBytes) + EnvelopeMaxBytes
+		}
+	}
+	return &options
 }
 
 // Register adds a tool to s for every method registered on server that carries

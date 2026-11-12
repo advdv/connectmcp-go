@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/advdv/connectmcp-go"
 	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
@@ -222,6 +224,50 @@ func TestNewTransport_FirstCallHeaders(t *testing.T) {
 
 	mu.Lock()
 	defer mu.Unlock()
-	// initialize, notifications/initialized, tools/call, DELETE.
-	g.Expect(auth).To(Equal([]string{"", "", "Bearer secret", ""}))
+	// server/discover, initialize, notifications/initialized, tools/call, DELETE.
+	g.Expect(auth).To(Equal([]string{"", "", "", "Bearer secret", ""}))
+}
+
+// TestNewTransport_RequestTooLarge checks that a request message over the
+// server's limit is RESOURCE_EXHAUSTED whether the server refuses the
+// arguments (a tool error) or the HTTP body that carries them (HTTP 413).
+func TestNewTransport_RequestTooLarge(t *testing.T) {
+	const limit = 1024
+	for name, opts := range map[string]*mcp.StreamableHTTPOptions{
+		"default":        nil,
+		"stateless json": {Stateless: true, JSONResponse: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			items := &transportItems{}
+			server := connect.NewServer()
+			testdataconnect.RegisterTestServiceHandler(server, items)
+			handler, err := connectmcp.NewHandler(server,
+				connectmcp.WithReadMaxBytes(limit), connectmcp.WithStreamableHTTPOptions(opts))
+			if err != nil {
+				t.Fatal(err)
+			}
+			httpServer := httptest.NewServer(handler)
+			t.Cleanup(httpServer.Close)
+
+			for name, tc := range map[string]struct {
+				size    int
+				message string
+			}{
+				"arguments over the limit": {size: limit, message: "message is larger than configured max 1024"},
+				"body over the limit":      {size: limit + connectmcp.EnvelopeMaxBytes, message: "Request Entity Too Large"},
+			} {
+				t.Run(name, func(t *testing.T) {
+					g := NewWithT(t)
+					transport := connectmcp.NewTransport(nil, httpServer.URL)
+					t.Cleanup(func() { _ = transport.Close() })
+					client := testdataconnect.NewTestServiceClient(connect.NewClient(transport))
+
+					_, err := client.CreateItem(t.Context(), &testdata.CreateItemRequest{Name: strings.Repeat("x", tc.size)})
+					g.Expect(connect.CodeOf(err)).To(Equal(connect.CodeResourceExhausted), "%v", err)
+					g.Expect(err).To(MatchError(ContainSubstring(tc.message)))
+					g.Expect(items.created).To(BeEmpty())
+				})
+			}
+		})
+	}
 }

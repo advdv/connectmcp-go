@@ -6,7 +6,7 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260825204119-511051f7f437.1
 	connectrpc.com/connect/v2 v2.0.2
 	github.com/google/go-cmp v0.7.0
-	github.com/modelcontextprotocol/go-sdk v1.4.1
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/onsi/gomega v1.37.0
 	github.com/redpanda-data/ai-sdk-go v0.0.0-20260529154443-413292e00db5
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -26,7 +26,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
@@ -53,6 +53,7 @@ require (
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genai v1.51.0 // indirect
 	google.golang.org/grpc v1.82.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

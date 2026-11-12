@@ -1,6 +1,7 @@
 package connectmcp_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -545,4 +546,103 @@ func TestRegister_ReadMaxBytes(t *testing.T) {
 			g.Expect(cerr.Message()).To(Equal(want))
 		})
 	}
+}
+
+// TestNewHandler_RequestBodyLimit checks that NewHandler bounds the HTTP
+// request body by the WithReadMaxBytes limit plus EnvelopeMaxBytes: arguments
+// over the limit in a body under it are a RESOURCE_EXHAUSTED tool error, a
+// body over it is refused with HTTP 413 before the tool is called.
+func TestNewHandler_RequestBodyLimit(t *testing.T) {
+	const limit = 1024
+	stateless := func(maxBody int64) connectmcp.Option {
+		return connectmcp.WithStreamableHTTPOptions(&mcp.StreamableHTTPOptions{
+			Stateless: true, JSONResponse: true, MaxRequestBodyBytes: maxBody,
+		})
+	}
+	// envelope is the size of everything in the body but the arguments.
+	envelope := len(toolCallBody(json.RawMessage(`{}`))) - len(`{}`)
+
+	for name, tc := range map[string]struct {
+		opts     []connectmcp.Option
+		args     int    // size of the arguments
+		status   int    // 0: http.StatusOK
+		toolErr  string // code of the tool error, if any
+		httpBody string
+	}{
+		"arguments at the limit":   {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit), stateless(0)}, args: limit},
+		"arguments over the limit": {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit), stateless(0)}, args: limit + 1, toolErr: "RESOURCE_EXHAUSTED"},
+		"body at the limit": {
+			opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit), stateless(0)},
+			args: limit + connectmcp.EnvelopeMaxBytes - envelope, toolErr: "RESOURCE_EXHAUSTED",
+		},
+		"body over the limit": {
+			opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit), stateless(0)},
+			args: limit + connectmcp.EnvelopeMaxBytes - envelope + 1, status: http.StatusRequestEntityTooLarge,
+			httpBody: "request body exceeds 66560 bytes\n",
+		},
+		"default, arguments over the limit": {opts: []connectmcp.Option{stateless(0)}, args: connectmcp.DefaultReadMaxBytes + 1, toolErr: "RESOURCE_EXHAUSTED"},
+		"default, body over the limit": {
+			opts: []connectmcp.Option{stateless(0)},
+			args: connectmcp.DefaultReadMaxBytes + connectmcp.EnvelopeMaxBytes, status: http.StatusRequestEntityTooLarge,
+			httpBody: "request body exceeds 4259840 bytes\n",
+		},
+		"default, not stateless": {
+			args: connectmcp.DefaultReadMaxBytes + connectmcp.EnvelopeMaxBytes, status: http.StatusRequestEntityTooLarge,
+			httpBody: "request body exceeds 4259840 bytes\n",
+		},
+		"zero allows any size": {
+			opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(0), stateless(0)},
+			args: connectmcp.DefaultReadMaxBytes + connectmcp.EnvelopeMaxBytes,
+		},
+		"explicit body limit": {
+			opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit), stateless(512)},
+			args: limit, status: http.StatusRequestEntityTooLarge, httpBody: "request body exceeds 512 bytes\n",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			svc := &service{}
+			server := connect.NewServer()
+			testdataconnect.RegisterTestServiceHandler(server, svc)
+			handler, err := connectmcp.NewHandler(server, tc.opts...)
+			g.Expect(err).ToNot(HaveOccurred())
+
+			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(toolCallBody(createItemArgs(tc.args))))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json, text/event-stream")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if tc.status != 0 {
+				g.Expect(rec.Code).To(Equal(tc.status), rec.Body.String())
+				g.Expect(rec.Body.String()).To(Equal(tc.httpBody))
+				g.Expect(svc.calls).To(BeZero())
+				return
+			}
+			g.Expect(rec.Code).To(Equal(http.StatusOK), rec.Body.String())
+			var response struct {
+				Result struct {
+					IsError bool `json:"isError"`
+					Content []struct {
+						Text string `json:"text"`
+					} `json:"content"`
+				} `json:"result"`
+			}
+			g.Expect(json.Unmarshal(rec.Body.Bytes(), &response)).To(Succeed())
+			g.Expect(response.Result.Content).To(HaveLen(1), rec.Body.String())
+			if tc.toolErr == "" {
+				g.Expect(response.Result.IsError).To(BeFalse(), response.Result.Content[0].Text)
+				g.Expect(svc.calls).To(Equal(1))
+				return
+			}
+			g.Expect(response.Result.IsError).To(BeTrue())
+			g.Expect(response.Result.Content[0].Text).To(ContainSubstring(tc.toolErr))
+			g.Expect(svc.calls).To(BeZero())
+		})
+	}
+}
+
+// toolCallBody returns the JSON-RPC request calling CreateItem with args.
+func toolCallBody(args json.RawMessage) []byte {
+	return []byte(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"` + createItemTool + `","arguments":` + string(args) + `}}`)
 }

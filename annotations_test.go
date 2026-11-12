@@ -61,11 +61,11 @@ func TestRegister_Annotations(t *testing.T) {
 		"list_workspaces": `{"title":"List workspaces","annotations":{
 			"title":"List workspaces","readOnlyHint":true,"idempotentHint":true,"destructiveHint":false,"openWorldHint":false}}`,
 		"create_workspace": `{"title":"Create workspace","annotations":{
-			"title":"Create workspace","destructiveHint":false,"openWorldHint":false}}`,
+			"title":"Create workspace","readOnlyHint":false,"idempotentHint":false,"destructiveHint":false,"openWorldHint":false}}`,
 		"update_workspace": `{"title":"Update workspace","annotations":{
-			"title":"Update workspace","idempotentHint":true,"openWorldHint":false}}`,
+			"title":"Update workspace","readOnlyHint":false,"idempotentHint":true,"openWorldHint":false}}`,
 		"delete_workspace": `{"title":"Delete workspace","annotations":{
-			"title":"Delete workspace","idempotentHint":true,"destructiveHint":true,"openWorldHint":false}}`,
+			"title":"Delete workspace","readOnlyHint":false,"idempotentHint":true,"destructiveHint":true,"openWorldHint":false}}`,
 		// Neither option: no annotations key at all, MCP's defaults apply.
 		"archive_workspace": `{}`,
 	} {
@@ -78,7 +78,7 @@ func TestRegister_Annotations(t *testing.T) {
 func TestRegister_AnnotationsFromIdempotencyLevel(t *testing.T) {
 	for level, want := range map[descriptorpb.MethodOptions_IdempotencyLevel]string{
 		descriptorpb.MethodOptions_NO_SIDE_EFFECTS:     `{"annotations":{"readOnlyHint":true,"idempotentHint":true,"destructiveHint":false}}`,
-		descriptorpb.MethodOptions_IDEMPOTENT:          `{"annotations":{"idempotentHint":true}}`,
+		descriptorpb.MethodOptions_IDEMPOTENT:          `{"annotations":{"readOnlyHint":false,"idempotentHint":true}}`,
 		descriptorpb.MethodOptions_IDEMPOTENCY_UNKNOWN: `{}`,
 	} {
 		t.Run(level.String(), func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestWithToolAnnotations(t *testing.T) {
 	g.Expect(seen).To(ConsistOf("GetWorkspace", "ListWorkspaces", "CreateWorkspace",
 		"UpdateWorkspace", "DeleteWorkspace", "ArchiveWorkspace"))
 	g.Expect(tools["archive_workspace"]).To(MatchJSON(
-		`{"title":"Archive workspace","annotations":{"title":"Archive workspace","openWorldHint":false}}`))
+		`{"title":"Archive workspace","annotations":{"title":"Archive workspace","openWorldHint":false,"readOnlyHint":false,"idempotentHint":false}}`))
 	g.Expect(tools["update_workspace"]).To(MatchJSON(`{}`))
 	g.Expect(tools["get_workspace"]).To(ContainSubstring(`"readOnlyHint":true`))
 }
