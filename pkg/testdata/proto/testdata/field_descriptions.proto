@@ -1,0 +1,66 @@
+// Protos that exercise (connectmcp.v1.field_description): where the text of
+// the option ends up for each shape of field.
+syntax = "proto3";
+
+package testdata;
+
+import "buf/validate/validate.proto";
+import "connectmcp/v1/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "testdata/validation.proto";
+
+message FieldDescriptionCases {
+  string plain = 1 [(connectmcp.v1.field_description) = "A plain field."];
+  string undescribed = 2;
+  string empty = 3 [(connectmcp.v1.field_description) = ""];
+  string padded = 4 [(connectmcp.v1.field_description) = "  Padded.\n"];
+  string multiline = 5 [(connectmcp.v1.field_description) = "First line.\nSecond line."];
+
+  // with_rules: the rules follow the description.
+  string with_rules = 6 [
+    (connectmcp.v1.field_description) = "Starts with x-.",
+    (buf.validate.field).string.prefix = "x-",
+    (buf.validate.field).string.max_len = 10,
+    (buf.validate.field).string.example = "x-1"
+  ];
+
+  // The description of a list or a map is on the array or object, not on
+  // its items or values.
+  repeated string list = 7 [
+    (connectmcp.v1.field_description) = "A list.",
+    (buf.validate.field).repeated.items.string.prefix = "x-"
+  ];
+  map<string, int32> counts = 8 [(connectmcp.v1.field_description) = "Counts by name."];
+
+  // On a message field it describes the message as used in the field; the
+  // rules of the message itself follow.
+  Nested nested = 9 [(connectmcp.v1.field_description) = "The nested thing."];
+  Nested other_nested = 10;
+  Urgency urgency = 11 [(connectmcp.v1.field_description) = "How urgent it is."];
+  google.protobuf.Timestamp at = 12 [(connectmcp.v1.field_description) = "When it happened."];
+
+  // Well-known types and the recursion placeholder have a description of
+  // their own, which follows the configured one.
+  google.protobuf.Value value = 13 [(connectmcp.v1.field_description) = "Any value."];
+  FieldDescriptionCases child = 14 [(connectmcp.v1.field_description) = "A child."];
+
+  oneof choice {
+    string by_name = 15 [
+      (connectmcp.v1.field_description) = "The name to look up.",
+      (buf.validate.field).string.prefix = "names/"
+    ];
+    int32 by_number = 16;
+  }
+
+  message Nested {
+    option (buf.validate.message).cel = {
+      id: "nested.differs"
+      message: "a and b must differ"
+      expression: "this.a != this.b"
+    };
+
+    string a = 1 [(connectmcp.v1.field_description) = "The first."];
+    string b = 2;
+  }
+}

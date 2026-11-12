@@ -431,8 +431,8 @@ func TestValidateRules_SchemaAcceptsWhatTheRulesAccept(t *testing.T) {
 }
 
 // TestToolForMethod_ValidateRules checks the whole input schema of a tool
-// whose request combines most kinds of rules, and that examples reach the
-// output schema as well.
+// whose request combines field descriptions and most kinds of rules, and
+// that examples reach the output schema as well.
 func TestToolForMethod_ValidateRules(t *testing.T) {
 	g := NewWithT(t)
 	method := testdata.File_testdata_validation_proto.Services().ByName("ReservationService").Methods().ByName("CreateReservation")
@@ -445,12 +445,22 @@ func TestToolForMethod_ValidateRules(t *testing.T) {
 		"properties": {
 			"parent": {
 				"type": "string",
-				"description": "Rules: uuid_name = \"workspaces\": value must be a resource name with a UUID in lower case as its ID",
+				"description": "The workspace to book in.\nRules: uuid_name = \"workspaces\": value must be a resource name with a UUID in lower case as its ID",
 				"examples": ["workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"]
 			},
 			"title": {"type": "string", "minLength": 1, "maxLength": 120, "examples": ["Quarterly planning"]},
-			"seats": {"type": "integer", "minimum": 1, "maximum": 50, "examples": [8]},
-			"start_time": {"type": ["string", "null"], "format": "date-time", "description": "Rules: timestamp.gt_now"},
+			"seats": {
+				"type": "integer",
+				"description": "Number of seats. The server uses 1 when unset.",
+				"minimum": 1,
+				"maximum": 50,
+				"examples": [8]
+			},
+			"start_time": {
+				"type": ["string", "null"],
+				"format": "date-time",
+				"description": "When the reservation starts.\nRules: timestamp.gt_now"
+			},
 			"end_time": {"type": ["string", "null"], "format": "date-time"},
 			"attendees": {
 				"type": "array",

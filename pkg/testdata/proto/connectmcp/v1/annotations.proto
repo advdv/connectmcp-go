@@ -52,6 +52,25 @@ extend google.protobuf.MethodOptions {
   ToolAnnotations tool_annotations = 58802;
 }
 
+extend google.protobuf.FieldOptions {
+  // field_description describes a field to the model: it is the
+  // "description" of the field's property in the JSON schema of every tool
+  // whose request or response contains the field.
+  //
+  //   string parent = 1 [
+  //     (connectmcp.v1.field_description) = "The workspace to book in, as \"workspaces/{id}\"."
+  //   ];
+  //
+  // Like tool_description it is an option because the descriptors compiled
+  // into the binary carry options but not comments. Say what the field
+  // means and what the server does with it (defaults, limits it applies);
+  // (buf.validate) rules and examples are added to the schema by
+  // themselves. On a message field it describes the message as used in
+  // that field. Whitespace around the text is dropped, and an empty text
+  // is the same as no option.
+  string field_description = 58803;
+}
+
 // ToolAnnotations are the MCP tool annotations of a method that carries
 // (connectmcp.v1.tool_description).
 //

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "compatibility_test.pb.go",
         "edge_cases.pb.go",
+        "field_descriptions.pb.go",
         "predefined_rules.pb.go",
         "test_service.pb.go",
         "tool_annotations.pb.go",

@@ -24,9 +24,10 @@ data without destroying any. `tools/list` returns:
 The other two tools carry no annotations, so clients assume MCP's defaults
 (possibly destructive, open world).
 
-## Validation rules in the schema
+## Field descriptions and validation rules in the schema
 
-The request of `CreateReservation` (`validation.proto`) carries
+The request of `CreateReservation` (`validation.proto`) describes its fields
+with `(connectmcp.v1.field_description)` and carries
 [protovalidate](https://buf.build/bufbuild/protovalidate) rules and example
 values:
 
@@ -39,6 +40,7 @@ message CreateReservationRequest {
   };
 
   string parent = 1 [
+    (connectmcp.v1.field_description) = "The workspace to book in.",
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.(testdata.uuid_name) = "workspaces",
     (buf.validate.field).string.example = "workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"
@@ -47,8 +49,12 @@ message CreateReservationRequest {
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string = {min_len: 1, max_len: 120, example: "Quarterly planning"}
   ];
-  optional int32 seats = 3 [(buf.validate.field).int32 = {gte: 1, lte: 50, example: 8}];
+  optional int32 seats = 3 [
+    (connectmcp.v1.field_description) = "Number of seats. The server uses 1 when unset.",
+    (buf.validate.field).int32 = {gte: 1, lte: 50, example: 8}
+  ];
   google.protobuf.Timestamp start_time = 4 [
+    (connectmcp.v1.field_description) = "When the reservation starts.",
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).timestamp.gt_now = true
   ];
@@ -68,8 +74,9 @@ message CreateReservationRequest {
 `uuid_name` is a predefined rule that `predefined_rules.proto` declares itself,
 with the message "value must be a resource name with a UUID in lower case as
 its ID". The input schema of the `testdata_ReservationService_CreateReservation`
-tool has all of it. A rule with a JSON Schema equivalent is a keyword, any other
-rule is a line in a `description`:
+tool has all of it. A field description is the `description` of its property. A
+rule with a JSON Schema equivalent is a keyword, any other rule is a line after
+the description:
 
 ```json
 {
@@ -79,12 +86,18 @@ rule is a line in a `description`:
   "properties": {
     "parent": {
       "type": "string",
-      "description": "Rules: uuid_name = \"workspaces\": value must be a resource name with a UUID in lower case as its ID",
+      "description": "The workspace to book in.\nRules: uuid_name = \"workspaces\": value must be a resource name with a UUID in lower case as its ID",
       "examples": ["workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"]
     },
     "title": {"type": "string", "minLength": 1, "maxLength": 120, "examples": ["Quarterly planning"]},
-    "seats": {"type": "integer", "minimum": 1, "maximum": 50, "examples": [8]},
-    "start_time": {"type": ["string", "null"], "format": "date-time", "description": "Rules: timestamp.gt_now"},
+    "seats": {
+      "type": "integer", "minimum": 1, "maximum": 50, "examples": [8],
+      "description": "Number of seats. The server uses 1 when unset."
+    },
+    "start_time": {
+      "type": ["string", "null"], "format": "date-time",
+      "description": "When the reservation starts.\nRules: timestamp.gt_now"
+    },
     "end_time": {"type": ["string", "null"], "format": "date-time"},
     "attendees": {
       "type": "array", "maxItems": 20, "description": "Rules: repeated.unique",

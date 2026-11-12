@@ -32,8 +32,9 @@ func main() {
 	// The connect server the tool calls are dispatched to.
 	server := connect.NewServer()
 	testdataconnect.RegisterTestServiceHandler(server, &testServer{})
-	// CreateReservation's request carries (buf.validate) rules and example
-	// values, which are in the input schema of the tool (see the README).
+	// CreateReservation's request carries field descriptions, (buf.validate)
+	// rules and example values, which are in the input schema of the tool
+	// (see the README).
 	// Nothing here enforces them: add a protovalidate interceptor to the
 	// connect server for that.
 	testdataconnect.RegisterReservationServiceHandler(server, &reservationServer{})

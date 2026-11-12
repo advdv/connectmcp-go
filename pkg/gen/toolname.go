@@ -50,6 +50,19 @@ func ConfiguredToolName(method protoreflect.MethodDescriptor) (string, bool) {
 	return name, true
 }
 
+// ConfiguredFieldDescription returns the (connectmcp.v1.field_description)
+// option of a field, without surrounding whitespace, and whether it has one
+// that is not empty.
+func ConfiguredFieldDescription(fd protoreflect.FieldDescriptor) (string, bool) {
+	opts := fd.Options()
+	if opts == nil || !proto.HasExtension(opts, connectmcpv1.E_FieldDescription) {
+		return "", false
+	}
+	description, _ := proto.GetExtension(opts, connectmcpv1.E_FieldDescription).(string)
+	description = strings.TrimSpace(description)
+	return description, description != ""
+}
+
 // ConfiguredToolDescription returns the (connectmcp.v1.tool_description) option on
 // the method and whether it is set at all. The connectmcp package exposes
 // exactly the methods that carry it.

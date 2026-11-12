@@ -27,7 +27,7 @@ connectmcp.go               Package connectmcp (//:connectmcp-go), THE entry poi
 pkg/gen/                    Core library:
   schema.go                 JSON schema generation from protoreflect descriptors
   validate.go               (buf.validate) rules -> JSON Schema keywords and description lines
-  toolname.go               Tool names and the (connectmcp.v1.*) method options
+  toolname.go               Tool names and the (connectmcp.v1.*) method and field options
 pkg/runtime/                MCPServer interface, argument decoding, error handling (connect v2 errors)
   server.go                 MCPServer interface + Tool/CallToolRequest/CallToolResult types
   gosdk/                    Adapter: modelcontextprotocol/go-sdk -> runtime.MCPServer
@@ -100,6 +100,13 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   `title`, `destructive_hint`, `open_world_hint`; `destructive_hint: true` on `NO_SIDE_EFFECTS` is a
   `Register` error (`gen.ToolAnnotationsForMethod`). `connectmcp.WithToolAnnotations` adjusts them in
   code, unchecked. The gosdk adapter sends the title as `Tool.title` and `annotations.title`.
+- Text written for the model is always a `connectmcp.v1` option, never a comment and never another
+  project's annotation: `tool_description` for a tool, `field_description` for a field
+  (`gen.ConfiguredFieldDescription`), which becomes the `description` of the field's property in input
+  and output schemas, ahead of any generated description (placeholder, well-known type) and of the
+  rules. There is no message option: the tool description covers the request, a field description
+  covers a nested message where it is used. Semantics come from standard options
+  (`idempotency_level`, `google.api.field_behavior`, `buf.validate`).
 - Validation rules (`pkg/gen/validate.go`): `gen.ExtractValidateConstraints` walks the
   `(buf.validate.field)` rules by reflection, so no rule needs code to be found (standard, list items,
   map keys/values, predefined extensions, CEL, `example`). A rule becomes a JSON Schema keyword only
@@ -110,7 +117,7 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   (`gen.ExtractValidateMessageConstraints`); `(buf.validate.field).required` counts in
   `gen.IsFieldRequired`. Nothing validates arguments against the schema. A rule that arrives as unknown
   fields (unlinked predefined rule, newer protovalidate) is a `Register` error
-  (`gen.CheckValidateRules`), never a silent gap. Field comments are not in the schema.
+  (`gen.CheckValidateRules`), never a silent gap.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
 - `pkg/gen` works with any protoreflect descriptor
 - Tool registration is MCP-library-agnostic via the runtime.MCPServer interface; runtime/gosdk
@@ -132,6 +139,7 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   connect E2E) live in the root `*_test.go` files; `testsupport_test.go` holds their wiring
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`
 - Tool annotations: `annotations_test.go` on `tool_annotations.proto` (WorkspaceService)
+- Field descriptions: `pkg/gen/field_description_test.go` on `field_descriptions.proto`
 - Validation rules: `pkg/gen/validate_test.go` on `validation.proto` (one field per kind of rule) and
   `predefined_rules.proto` (predefined rules; proto2, as extending a rule message requires)
 - Fuzz tests: `pkg/runtime/decode_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`

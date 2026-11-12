@@ -53,8 +53,8 @@ message CreateReservationRequest {
     expression: "this.end_time > this.start_time"
   };
 
-  // The workspace to book in.
   string parent = 1 [
+    (connectmcp.v1.field_description) = "The workspace to book in.",
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.(testdata.uuid_name) = "workspaces",
     (buf.validate.field).string.example = "workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d"
@@ -70,14 +70,17 @@ message CreateReservationRequest {
     }
   ];
 
-  // Number of seats.
-  optional int32 seats = 3 [(buf.validate.field).int32 = {
-    gte: 1
-    lte: 50
-    example: 8
-  }];
+  optional int32 seats = 3 [
+    (connectmcp.v1.field_description) = "Number of seats. The server uses 1 when unset.",
+    (buf.validate.field).int32 = {
+      gte: 1
+      lte: 50
+      example: 8
+    }
+  ];
 
   google.protobuf.Timestamp start_time = 4 [
+    (connectmcp.v1.field_description) = "When the reservation starts.",
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).timestamp.gt_now = true
   ];

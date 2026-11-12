@@ -28,6 +28,7 @@ go_test(
     srcs = [
         "codec_property_test.go",
         "discriminated_object_test.go",
+        "field_description_test.go",
         "mangle_bug_test.go",
         "oneof_shapes_test.go",
         "schema_edge_cases_test.go",

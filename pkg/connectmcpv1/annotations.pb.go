@@ -138,6 +138,14 @@ var file_connectmcp_v1_annotations_proto_extTypes = []protoimpl.ExtensionInfo{
 		Tag:           "bytes,58802,opt,name=tool_annotations",
 		Filename:      "connectmcp/v1/annotations.proto",
 	},
+	{
+		ExtendedType:  (*descriptorpb.FieldOptions)(nil),
+		ExtensionType: (*string)(nil),
+		Field:         58803,
+		Name:          "connectmcp.v1.field_description",
+		Tag:           "bytes,58803,opt,name=field_description",
+		Filename:      "connectmcp/v1/annotations.proto",
+	},
 }
 
 // Extension fields to descriptorpb.MethodOptions.
@@ -188,6 +196,28 @@ var (
 	E_ToolAnnotations = &file_connectmcp_v1_annotations_proto_extTypes[2]
 )
 
+// Extension fields to descriptorpb.FieldOptions.
+var (
+	// field_description describes a field to the model: it is the
+	// "description" of the field's property in the JSON schema of every tool
+	// whose request or response contains the field.
+	//
+	//	string parent = 1 [
+	//	  (connectmcp.v1.field_description) = "The workspace to book in, as \"workspaces/{id}\"."
+	//	];
+	//
+	// Like tool_description it is an option because the descriptors compiled
+	// into the binary carry options but not comments. Say what the field
+	// means and what the server does with it (defaults, limits it applies);
+	// (buf.validate) rules and examples are added to the schema by
+	// themselves. On a message field it describes the message as used in
+	// that field. Whitespace around the text is dropped, and an empty text
+	// is the same as no option.
+	//
+	// optional string field_description = 58803;
+	E_FieldDescription = &file_connectmcp_v1_annotations_proto_extTypes[3]
+)
+
 var File_connectmcp_v1_annotations_proto protoreflect.FileDescriptor
 
 const file_connectmcp_v1_annotations_proto_rawDesc = "" +
@@ -201,7 +231,8 @@ const file_connectmcp_v1_annotations_proto_rawDesc = "" +
 	"\x10_open_world_hint:=\n" +
 	"\ttool_name\x12\x1e.google.protobuf.MethodOptions\x18\xb0\xcb\x03 \x01(\tR\btoolName:K\n" +
 	"\x10tool_description\x12\x1e.google.protobuf.MethodOptions\x18\xb1\xcb\x03 \x01(\tR\x0ftoolDescription:k\n" +
-	"\x10tool_annotations\x12\x1e.google.protobuf.MethodOptions\x18\xb2\xcb\x03 \x01(\v2\x1e.connectmcp.v1.ToolAnnotationsR\x0ftoolAnnotationsB>Z<github.com/advdv/connectmcp-go/pkg/connectmcpv1;connectmcpv1b\x06proto3"
+	"\x10tool_annotations\x12\x1e.google.protobuf.MethodOptions\x18\xb2\xcb\x03 \x01(\v2\x1e.connectmcp.v1.ToolAnnotationsR\x0ftoolAnnotations:L\n" +
+	"\x11field_description\x12\x1d.google.protobuf.FieldOptions\x18\xb3\xcb\x03 \x01(\tR\x10fieldDescriptionB>Z<github.com/advdv/connectmcp-go/pkg/connectmcpv1;connectmcpv1b\x06proto3"
 
 var (
 	file_connectmcp_v1_annotations_proto_rawDescOnce sync.Once
@@ -220,6 +251,7 @@ var (
 	file_connectmcp_v1_annotations_proto_goTypes  = []any{
 		(*ToolAnnotations)(nil),            // 0: connectmcp.v1.ToolAnnotations
 		(*descriptorpb.MethodOptions)(nil), // 1: google.protobuf.MethodOptions
+		(*descriptorpb.FieldOptions)(nil),  // 2: google.protobuf.FieldOptions
 	}
 )
 
@@ -227,11 +259,12 @@ var file_connectmcp_v1_annotations_proto_depIdxs = []int32{
 	1, // 0: connectmcp.v1.tool_name:extendee -> google.protobuf.MethodOptions
 	1, // 1: connectmcp.v1.tool_description:extendee -> google.protobuf.MethodOptions
 	1, // 2: connectmcp.v1.tool_annotations:extendee -> google.protobuf.MethodOptions
-	0, // 3: connectmcp.v1.tool_annotations:type_name -> connectmcp.v1.ToolAnnotations
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	3, // [3:4] is the sub-list for extension type_name
-	0, // [0:3] is the sub-list for extension extendee
+	2, // 3: connectmcp.v1.field_description:extendee -> google.protobuf.FieldOptions
+	0, // 4: connectmcp.v1.tool_annotations:type_name -> connectmcp.v1.ToolAnnotations
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	4, // [4:5] is the sub-list for extension type_name
+	0, // [0:4] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
@@ -248,7 +281,7 @@ func file_connectmcp_v1_annotations_proto_init() {
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_connectmcp_v1_annotations_proto_rawDesc), len(file_connectmcp_v1_annotations_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   1,
-			NumExtensions: 3,
+			NumExtensions: 4,
 			NumServices:   0,
 		},
 		GoTypes:           file_connectmcp_v1_annotations_proto_goTypes,

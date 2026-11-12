@@ -26,6 +26,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 - **Correctable argument errors.** Undecodable arguments are returned as an `INVALID_ARGUMENT` tool error, in the same JSON shape as any other failed call, naming the offending field (also as a `google.rpc.BadRequest` detail) and the expected shape, so the model can retry.
 - **Tool annotations.** Tools announce MCP's `readOnlyHint` and `idempotentHint` from the standard `idempotency_level` option, and a title, `destructiveHint` and `openWorldHint` from `(connectmcp.v1.tool_annotations)`, so clients can tell a read from a delete.
 - **Validation rules in the schema.** Every [protovalidate](https://buf.build/bufbuild/protovalidate) rule reaches the tool's JSON schema, found by reflection instead of a fixed list: standard rules, the rules of list items and map keys and values, predefined (custom) rules, CEL rules and example values. A rule is a JSON Schema keyword where one exists and a line in the property's `description` otherwise (upstream: string length, pattern, uuid/email and some numeric bounds; anything else was dropped silently).
+- **Field descriptions.** `(connectmcp.v1.field_description)` describes a field to the model, as the `description` of its property in the tool schemas, so field guidance no longer has to be written into the tool description.
 - **Request size limit.** `connectmcp.WithReadMaxBytes` limits the size of a tool call's arguments like `connecthttp.WithReadMaxBytes` limits a request message (default 4 MiB); larger arguments are a `RESOURCE_EXHAUSTED` tool error.
 - **Removed:** descriptor-only `gen.RegisterService`, extra properties, the tool name prefix and `runtime.Option` (the filter is now `connectmcp.WithToolFilter`).
 - **Module and proto.** The Go module is `github.com/advdv/connectmcp-go`, with the `connectmcp` package at its root. The annotations are `connectmcp/v1/annotations.proto` in proto package `connectmcp.v1` (upstream: `mcp.v1`, same extension numbers), with Go code in `pkg/connectmcpv1`, published to `buf.build/advdv/connectmcp` on each release.
@@ -34,7 +35,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 ## Features
 
 - Serves a connect-go v2 server as MCP in one call, through its interceptors
-- Tools are selected and described with a proto option
+- Tools are selected and described with a proto option, and so are their fields
 - Tool annotations (read-only, idempotent, destructive, title) from `idempotency_level` and a proto option
 - JSON Schema for tool inputs and outputs derived from the request and response messages
 - [protovalidate](https://buf.build/bufbuild/protovalidate) rules and example values in those schemas, custom and CEL rules included
@@ -60,6 +61,31 @@ service ItemService {
 The description is what the model sees. It is a proto option rather than the RPC's comment because the descriptors compiled into a Go binary carry options but not comments. See [Importing the annotation with Buf](#importing-the-annotation-with-buf) for how to depend on the annotation.
 
 Generate the standard `*.pb.go` and connect-go v2 code as usual; nothing else is generated.
+
+### Describe the fields
+
+A field is described to the model with the `(connectmcp.v1.field_description)` option, for the same reason: comments do not reach the binary.
+
+```proto
+message ListItemsRequest {
+  int32 page_size = 1 [
+    (connectmcp.v1.field_description) = "How many items to return. The server returns at most 100, and 20 when unset.",
+    (buf.validate.field).int32.gte = 0
+  ];
+}
+```
+
+The text is the `description` of the field's property in the input and output schema of every tool that uses the message:
+
+```json
+"page_size": {
+  "type": "integer",
+  "minimum": 0,
+  "description": "How many items to return. The server returns at most 100, and 20 when unset."
+}
+```
+
+Say what the field means and what the server does with it, such as defaults and limits it applies itself. [Validation rules](#validation-rules) and example values are added to the schema from the `buf.validate` options, so they need not be repeated in the text or in the tool description. On a message field the text describes the message as used in that field. Fields without the option have no description.
 
 ### Serve MCP
 
@@ -347,32 +373,39 @@ Protobuf types are mapped to JSON Schema. Understanding these mappings matters b
 
 ### Messages and maps
 
-Nested messages become nested `object` schemas. Maps depend on the mode:
-
-**Standard mode:** `map<K, V>` becomes a JSON object with `propertyNames` constraints (e.g., `pattern` for int keys, `enum` for bool keys).
-
-**OpenAI mode:** `map<K, V>` becomes an array of `{key, value}` objects. Key constraints (patterns, enums) are preserved on the `key` field. At runtime, `FixOpenAI` converts these arrays back to objects before proto unmarshaling.
+Nested messages become nested `object` schemas. `map<K, V>` becomes a JSON object whose values have the schema of `V`, with `propertyNames` constraining the keys (a `pattern` for integer keys, an `enum` for bool keys).
 
 ### Well-known types
 
-| Proto type | Standard schema | OpenAI schema |
-|---|---|---|
-| `google.protobuf.Timestamp` | `string` with `format: date-time` | Same |
-| `google.protobuf.Duration` | `string` with duration pattern | Same |
-| `google.protobuf.Struct` | `object` with `additionalProperties: true` | `string` (JSON-encoded) |
-| `google.protobuf.Value` | any (no type constraint) | `string` (JSON-encoded) |
-| `google.protobuf.ListValue` | `array` | `string` (JSON-encoded) |
-| `google.protobuf.FieldMask` | `string` | Same |
-| `google.protobuf.Any` | `object` with `@type` + `value` | Same, with `additionalProperties: false` |
-| Wrapper types (`StringValue`, etc.) | nullable scalar (e.g., `["string", "null"]`) | Same |
-
-In OpenAI mode, `FixOpenAI` handles the reverse transformation at runtime: JSON-encoded strings are parsed back, wrapper objects `{"value": X}` are unwrapped to `X`, and map arrays are converted to objects.
+| Proto type | JSON Schema |
+|---|---|
+| `google.protobuf.Timestamp` | `string` with `format: date-time` |
+| `google.protobuf.Duration` | `string` with a duration pattern |
+| `google.protobuf.Struct` | `object` with `additionalProperties: true` |
+| `google.protobuf.Value` | any (no type constraint) |
+| `google.protobuf.ListValue` | `array` |
+| `google.protobuf.FieldMask` | `string` |
+| `google.protobuf.Any` | `object` with `@type` + `value` |
+| Wrapper types (`StringValue`, etc.) | nullable scalar (e.g., `["string", "null"]`) |
 
 ### Oneof fields
 
-**Standard mode:** Uses JSON Schema `anyOf` with one entry per oneof group. Each entry specifies one allowed alternative.
+A oneof is one property, named after the oneof: an object with a `which` discriminator that names the member that is set, and one property per member. Providers reject a union (`anyOf`/`oneOf`) at the top of a tool's input schema, which is why it is an object.
 
-**OpenAI mode:** Oneof fields are flattened into nullable fields (e.g., `type: ["string", "null"]`) with a description noting the oneof constraint. At runtime, `FixOpenAI` strips null oneof alternatives and keeps only the first non-null field per group.
+```json
+"item_type": {
+  "type": "object",
+  "description": "Exactly one of the \"item_type\" group. Set \"which\" to the chosen field name, then set only that field.",
+  "required": ["which"],
+  "properties": {
+    "which": {"type": "string", "enum": ["product", "service"], "description": "Which field of the \"item_type\" oneof is set."},
+    "product": {"type": "object", "description": "The value when which=\"product\".", "...": "..."},
+    "service": {"type": "object", "description": "The value when which=\"service\".", "...": "..."}
+  }
+}
+```
+
+The arguments of a call are turned back into the oneof before they are decoded, and results are written in the same shape. A oneof with `(buf.validate.oneof).required` is in the parent's `required`.
 
 ### Validation rules
 
@@ -423,13 +456,13 @@ Three things to know:
 - Descriptions cost tokens in every `tools/list`. Rules with a keyword add no description, and a field without rules adds nothing.
 - A rule that the binary cannot decode is a registration error instead of a gap in the schema. That is a predefined rule whose Go package is not linked into the binary, or a rule newer than the protovalidate Go module (`buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go`) in your `go.mod`.
 
-Field comments are not in the schema: the descriptors compiled into a Go binary do not carry them.
+What a field means is not a rule: describe it with [`(connectmcp.v1.field_description)`](#describe-the-fields), whose text comes before the rules in the description. Field comments are not in the schema, because the descriptors compiled into a Go binary do not carry them.
 
 ### Recursive messages
 
-Self-referencing and mutually recursive messages (e.g., tree nodes, linked lists) are supported. The schema expands up to 3 levels deep with full field detail. Beyond that, recursive fields become `{"type": "string", "description": "JSON-encoded TreeNode. Provide a JSON object as a string."}` -- the same pattern used for `Struct`/`Value`/`ListValue` in OpenAI mode.
+Self-referencing and mutually recursive messages (e.g., tree nodes, linked lists) are supported. The schema expands up to 3 levels deep with full field detail. Beyond that, recursive fields become `{"type": "string", "description": "JSON-encoded TreeNode. Provide a JSON object as a string."}`.
 
-At runtime, `FixOpenAI` parses these string-encoded fields back into JSON objects before proto unmarshaling. The actual data can nest arbitrarily deep -- the depth limit only applies to the schema the LLM sees, not to what it can send.
+Such a string is parsed back into an object before the arguments are decoded. The actual data can nest arbitrarily deep -- the depth limit only applies to the schema the LLM sees, not to what it can send.
 
 ### Tool name mangling
 

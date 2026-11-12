@@ -249,6 +249,16 @@ func fieldSchema(fd protoreflect.FieldDescriptor, opts SchemaOptions, seen map[p
 		}
 	}
 
+	// What the author says about the field comes first, then what the
+	// schema says by itself (a placeholder, a well-known type), then the
+	// rules.
+	if description, ok := ConfiguredFieldDescription(fd); ok {
+		if generated, _ := schema["description"].(string); generated != "" {
+			description += "\n" + generated
+		}
+		schema["description"] = description
+	}
+
 	// The (buf.validate.field) rules describe the field as a whole: for a
 	// list or a map they carry the rules of its items, keys and values.
 	mergeConstraints(schema, ExtractValidateConstraints(fd))
@@ -432,9 +442,9 @@ func MangleHeadIfTooLong(name string, maxLen int) string {
 // ToolForMethod generates the MCP tool definition for a given RPC method
 // descriptor (input and output JSON schemas plus name, description and
 // annotations, see ToolAnnotationsForMethod).
-func ToolForMethod(method protoreflect.MethodDescriptor, comment string) runtime.Tool {
+func ToolForMethod(method protoreflect.MethodDescriptor, description string) runtime.Tool {
 	toolName := ToolNameForMethod(method)
-	description := CleanComment(comment)
+	description = CleanComment(description)
 	// On a contradiction the hints derived from idempotency_level are used;
 	// connectmcp rejects the method before getting here.
 	annotations, _ := ToolAnnotationsForMethod(method)

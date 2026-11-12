@@ -122,12 +122,10 @@ func (*RuleCasesResponse) Descriptor() ([]byte, []int) {
 }
 
 type CreateReservationRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The workspace to book in.
-	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Shown on the calendar.
-	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	// Number of seats.
+	Title     string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Seats     *int32                 `protobuf:"varint,3,opt,name=seats,proto3,oneof" json:"seats,omitempty"`
 	StartTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	EndTime   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
@@ -1473,14 +1471,14 @@ var File_testdata_validation_proto protoreflect.FileDescriptor
 const file_testdata_validation_proto_rawDesc = "" +
 	"\n" +
 	"\x19testdata/validation.proto\x12\btestdata\x1a\x1bbuf/validate/validate.proto\x1a\x1fconnectmcp/v1/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1ftestdata/predefined_rules.proto\"\x13\n" +
-	"\x11RuleCasesResponse\"\xf0\x05\n" +
-	"\x18CreateReservationRequest\x12`\n" +
-	"\x06parent\x18\x01 \x01(\tBH\xe2A\x01\x02\xbaHAr?\xca>\n" +
-	"workspaces\x92\x02/workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0dR\x06parent\x128\n" +
-	"\x05title\x18\x02 \x01(\tB\"\xe2A\x01\x02\xbaH\x1br\x19\x10\x01\x18x\x92\x02\x12Quarterly planningR\x05title\x12&\n" +
-	"\x05seats\x18\x03 \x01(\x05B\v\xbaH\b\x1a\x06@\b\x182(\x01H\x00R\x05seats\x88\x01\x01\x12G\n" +
+	"\x11RuleCasesResponse\"\xdf\x06\n" +
+	"\x18CreateReservationRequest\x12}\n" +
+	"\x06parent\x18\x01 \x01(\tBe\xe2A\x01\x02\xbaHAr?\xca>\n" +
+	"workspaces\x92\x02/workspaces/01936d3c-8f4a-7b2e-9c1d-5e6f7a8b9c0d\x9a\xdb\x1c\x19The workspace to book in.R\x06parent\x128\n" +
+	"\x05title\x18\x02 \x01(\tB\"\xe2A\x01\x02\xbaH\x1br\x19\x10\x01\x18x\x92\x02\x12Quarterly planningR\x05title\x12X\n" +
+	"\x05seats\x18\x03 \x01(\x05B=\xbaH\b\x1a\x06@\b\x182(\x01\x9a\xdb\x1c.Number of seats. The server uses 1 when unset.H\x00R\x05seats\x88\x01\x01\x12g\n" +
 	"\n" +
-	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\f\xe2A\x01\x02\xbaH\x05\xb2\x01\x02@\x01R\tstartTime\x12;\n" +
+	"start_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB,\xe2A\x01\x02\xbaH\x05\xb2\x01\x02@\x01\x9a\xdb\x1c\x1cWhen the reservation starts.R\tstartTime\x12;\n" +
 	"\bend_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x02R\aendTime\x12.\n" +
 	"\tattendees\x18\x06 \x03(\tB\x10\xbaH\r\x92\x01\n" +
 	"\x10\x14\x18\x01\"\x04r\x02`\x01R\tattendees\x12r\n" +
