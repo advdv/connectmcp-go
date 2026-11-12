@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect/v2"
@@ -448,4 +450,65 @@ func TestRegister_ToolName(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(listed.Tools).To(HaveLen(1))
 	g.Expect(listed.Tools[0].Name).To(Equal("create_item"))
+}
+
+// createItemArgs returns CreateItem arguments whose JSON is exactly size bytes.
+func createItemArgs(size int) json.RawMessage {
+	const overhead = len(`{"name":""}`)
+	return json.RawMessage(`{"name":"` + strings.Repeat("x", size-overhead) + `"}`)
+}
+
+// TestRegister_ReadMaxBytes checks that arguments larger than the configured
+// limit fail the call with connecthttp's RESOURCE_EXHAUSTED error before
+// reaching the service, that interceptors see that error, and that the client
+// gets it even when an interceptor rewrites it.
+func TestRegister_ReadMaxBytes(t *testing.T) {
+	const limit = 64
+	for name, tc := range map[string]struct {
+		opts     []connectmcp.Option
+		size     int
+		max      int // 0: the call succeeds
+		redacted bool
+	}{
+		"at the limit":              {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit)}, size: limit},
+		"over the limit":            {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit)}, size: limit + 1, max: limit},
+		"over the limit, rewritten": {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(limit)}, size: limit + 1, max: limit, redacted: true},
+		"default, at the limit":     {size: connectmcp.DefaultReadMaxBytes},
+		"default, over the limit":   {size: connectmcp.DefaultReadMaxBytes + 1, max: connectmcp.DefaultReadMaxBytes},
+		"zero allows any size":      {opts: []connectmcp.Option{connectmcp.WithReadMaxBytes(0)}, size: connectmcp.DefaultReadMaxBytes + 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			var intercepted error
+			svc := &service{}
+			server := connect.NewServer(func(next connect.ServerFunc) connect.ServerFunc {
+				return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+					intercepted = next(ctx, spec, stream)
+					if intercepted != nil && tc.redacted {
+						return connect.NewError(connect.CodeInternal, "redacted")
+					}
+					return intercepted
+				}
+			})
+			testdataconnect.RegisterTestServiceHandler(server, svc)
+			mcpServer := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "1.0"}, nil)
+			g.Expect(connectmcp.Register(gosdk.Wrap(mcpServer), server, tc.opts...)).To(Succeed())
+			session := inMemorySession(t, mcpServer)
+
+			res, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: createItemTool, Arguments: createItemArgs(tc.size)})
+			g.Expect(err).ToNot(HaveOccurred())
+			if tc.max == 0 {
+				g.Expect(res.IsError).To(BeFalse(), text(res))
+				g.Expect(svc.calls).To(Equal(1))
+				return
+			}
+			want := fmt.Sprintf("message is larger than configured max %d", tc.max)
+			g.Expect(text(res)).To(MatchJSON(fmt.Sprintf(`{"code":"RESOURCE_EXHAUSTED","message":%q}`, want)))
+			g.Expect(svc.calls).To(BeZero())
+			cerr, ok := errors.AsType[*connect.Error](intercepted)
+			g.Expect(ok).To(BeTrue(), "interceptor saw %v", intercepted)
+			g.Expect(cerr.Code()).To(Equal(connect.CodeResourceExhausted))
+			g.Expect(cerr.Message()).To(Equal(want))
+		})
+	}
 }

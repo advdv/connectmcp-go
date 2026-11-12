@@ -74,7 +74,7 @@ func invokeHandler(t *testing.T, h runtime.ToolHandler, args json.RawMessage) *r
 	if err := json.Unmarshal(args, &m); err != nil {
 		t.Fatalf("model sent arguments that are not a JSON object: %v (args: %s)", err, args)
 	}
-	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: m})
+	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: args})
 	if err != nil {
 		t.Fatalf("handler returned a protocol-level error instead of a tool result: %v", err)
 	}

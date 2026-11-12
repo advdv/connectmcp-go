@@ -29,6 +29,7 @@ package connectmcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -46,6 +47,10 @@ import (
 // Protocol is the CallInfo.Protocol value of RPCs that arrive as MCP tool calls.
 const Protocol = "mcp"
 
+// DefaultReadMaxBytes is the default limit on the size of a tool call's
+// arguments, matching connecthttp's default limit on a request message.
+const DefaultReadMaxBytes = 4 * 1024 * 1024 // 4 MiB
+
 // Option configures NewHandler and Register.
 type Option func(*config)
 
@@ -53,6 +58,7 @@ type config struct {
 	implementation mcp.Implementation
 	httpOptions    *mcp.StreamableHTTPOptions
 	toolFilter     func(toolName string) bool
+	readMaxBytes   int
 }
 
 // WithServerInfo sets the name and version the MCP server created by
@@ -82,8 +88,32 @@ func WithToolFilter(keep func(toolName string) bool) Option {
 	}
 }
 
+// WithReadMaxBytes limits the size of the request message a tool call can
+// carry: the JSON of its arguments, in bytes. It is the counterpart of
+// connecthttp.WithReadMaxBytes and defaults to DefaultReadMaxBytes; zero
+// allows any size.
+//
+// The arguments are checked before they are decoded. Larger arguments fail
+// the call when the handler receives its request message, with the same
+// RESOURCE_EXHAUSTED error connecthttp returns ("message is larger than
+// configured max N"), so interceptors see it. The client gets that error as a
+// tool error even when an interceptor rewrites it.
+//
+// The limit does not cover the JSON-RPC envelope or the HTTP request body,
+// which the MCP transport reads in full before the tool is called. To bound
+// those too, wrap the handler with net/http.MaxBytesHandler at a limit with
+// headroom above n.
+func WithReadMaxBytes(n int) Option {
+	return func(c *config) {
+		c.readMaxBytes = n
+	}
+}
+
 func newConfig(opts []Option) config {
-	config := config{implementation: mcp.Implementation{Name: "connectmcp", Version: "0.0.0"}}
+	config := config{
+		implementation: mcp.Implementation{Name: "connectmcp", Version: "0.0.0"},
+		readMaxBytes:   DefaultReadMaxBytes,
+	}
 	for _, opt := range opts {
 		opt(&config)
 	}
@@ -174,28 +204,28 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 	}
 
 	for _, tool := range tools {
-		s.AddTool(tool.def, toolHandler(server, tool.spec))
+		s.AddTool(tool.def, toolHandler(server, tool.spec, config.readMaxBytes))
 	}
 	return nil
 }
 
 // toolHandler returns the MCP tool handler that calls the procedure of spec on
-// server.
-func toolHandler(server *connect.Server, spec connect.Spec) runtime.ToolHandler {
+// server, accepting arguments of at most readMaxBytes (zero: any size).
+func toolHandler(server *connect.Server, spec connect.Spec, readMaxBytes int) runtime.ToolHandler {
 	return func(ctx context.Context, request *runtime.CallToolRequest) (*runtime.CallToolResult, error) {
 		info := &connect.CallInfo{Spec: spec, Protocol: Protocol, Codec: "json"}
 		for key, values := range request.Header {
 			info.RequestHeader().SetValues(key, values)
 		}
 
-		stream := &toolStream{args: request.Arguments}
+		stream := &toolStream{args: request.Arguments, readMaxBytes: readMaxBytes}
 		err := server.Call(ctx, spec.Procedure, info, stream)
 		switch {
 		case stream.argsErr != nil:
-			// Bad arguments are reported as the INVALID_ARGUMENT error the
-			// interceptors saw, in the shape of every other tool error,
-			// whatever the interceptors returned in its place: a rewritten
-			// error would hide from the model what to fix.
+			// Arguments that are too large or undecodable are reported as the
+			// error the interceptors saw, in the shape of every other tool
+			// error, whatever the interceptors returned in its place: a
+			// rewritten error would hide from the model what to fix.
 			return runtime.HandleError(stream.argsErr)
 		case err != nil:
 			return runtime.HandleError(err)
@@ -210,11 +240,12 @@ func toolHandler(server *connect.Server, spec connect.Spec) runtime.ToolHandler 
 // message is decoded from the tool arguments, and the single response message
 // is encoded as the tool result.
 type toolStream struct {
-	args     map[string]any
-	received bool
+	args         json.RawMessage
+	readMaxBytes int
+	received     bool
 
-	// argsErr is the error Receive returned because the arguments could not
-	// be decoded.
+	// argsErr is the error Receive returned because the arguments were too
+	// large or could not be decoded.
 	argsErr  *connect.Error
 	response []byte
 }
@@ -229,14 +260,28 @@ func (s *toolStream) Receive(msg any) error {
 	if !ok {
 		return connect.NewError(connect.CodeInternal, fmt.Sprintf("connectmcp: request message %T is not a proto.Message", msg))
 	}
+	if s.readMaxBytes > 0 && len(s.args) > s.readMaxBytes {
+		s.argsErr = connect.Errorf(connect.CodeResourceExhausted, "message is larger than configured max %d", s.readMaxBytes)
+		return s.argsErr
+	}
+
+	// Absent arguments are an empty object. Arguments that are not a JSON
+	// object decode to nil, which UnmarshalArguments reports to the model.
+	args := map[string]any{}
+	if len(s.args) > 0 {
+		if err := json.Unmarshal(s.args, &args); err != nil {
+			args = nil
+		}
+	}
+
 	// Rewrite oneof discriminated wrappers and recursion placeholders into the
 	// protojson-native shape, then unmarshal.
-	if s.args != nil {
-		if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), s.args); err != nil {
+	if args != nil {
+		if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), args); err != nil {
 			return s.badArguments(&runtime.ArgumentsError{Description: err.Error()})
 		}
 	}
-	if err := runtime.UnmarshalArguments(s.args, req); err != nil {
+	if err := runtime.UnmarshalArguments(args, req); err != nil {
 		argsErr, ok := errors.AsType[*runtime.ArgumentsError](err)
 		if !ok {
 			argsErr = &runtime.ArgumentsError{Description: err.Error()}

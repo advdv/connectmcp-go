@@ -39,9 +39,12 @@ type Tool struct {
 // ToolHandler is the callback invoked when an MCP client calls a tool.
 type ToolHandler func(ctx context.Context, request *CallToolRequest) (*CallToolResult, error)
 
-// CallToolRequest carries the decoded arguments from an MCP tool call.
+// CallToolRequest carries the arguments of an MCP tool call.
 type CallToolRequest struct {
-	Arguments map[string]any
+	// Arguments is the JSON of the call's arguments as the client sent it,
+	// undecoded, so that the handler can enforce a size limit before decoding.
+	// It is empty when the client sent no arguments.
+	Arguments json.RawMessage
 	// Header holds the headers of the HTTP request that carried the tool
 	// call, or nil when the MCP transport is not HTTP (e.g. stdio).
 	Header http.Header

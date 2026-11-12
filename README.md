@@ -25,6 +25,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 - **Opt-in tools.** Only methods annotated with `(mcp.v1.tool_description)` are exposed; misconfiguration (empty description, streaming method, invalid or duplicate name) is a registration error.
 - **connect-go v2 only.** Tool calls go through `connect.Server.Call`, so interceptors run and HTTP headers become request headers. gRPC and the mark3labs/mcp-go adapter are removed; only the official go-sdk is supported.
 - **Correctable argument errors.** Undecodable arguments are returned as an `INVALID_ARGUMENT` tool error, in the same JSON shape as any other failed call, naming the offending field (also as a `google.rpc.BadRequest` detail) and the expected shape, so the model can retry.
+- **Request size limit.** `connectmcp.WithReadMaxBytes` limits the size of a tool call's arguments like `connecthttp.WithReadMaxBytes` limits a request message (default 4 MiB); larger arguments are a `RESOURCE_EXHAUSTED` tool error.
 - **Removed:** descriptor-only `gen.RegisterService`, extra properties, the tool name prefix and `runtime.Option` (the filter is now `connectmcp.WithToolFilter`).
 - **Module and proto.** Go module is `github.com/advdv/protoc-gen-go-mcp`; the annotation proto is published to `buf.build/advdv/protoc-gen-go-mcp` on each release.
 - **Tooling.** Tools pinned with mise, reproducible `just generate`, golangci-lint in CI, GitHub-hosted runners.
@@ -160,6 +161,16 @@ Everything else is reported by code alone, without a message:
 - any other error is `UNKNOWN`.
 
 So return `connect.NewError(...)` with a message meant for the model, and keep internals in the wrapped error or in `.WithCause(err)` for logging.
+
+### Request size limit
+
+`connectmcp.WithReadMaxBytes(n)` is the counterpart of `connecthttp.WithReadMaxBytes`: it limits the request message, measured as the JSON of the tool call's arguments, to `n` bytes. The default is 4 MiB, as in connecthttp, and zero allows any size. The limit is checked before the arguments are decoded. Larger arguments fail the call, while the handler receives its request message, with connecthttp's own error, and interceptors see it:
+
+```json
+{"code": "RESOURCE_EXHAUSTED", "message": "message is larger than configured max 1048576"}
+```
+
+The limit does not cover the JSON-RPC envelope or the HTTP request body, which go-sdk reads in full before the tool is called. To bound those too, wrap the handler with `http.MaxBytesHandler` at a limit with headroom above `n`. go-sdk answers a body over that limit with a plain-text HTTP 400.
 
 ### Using grpc-go
 

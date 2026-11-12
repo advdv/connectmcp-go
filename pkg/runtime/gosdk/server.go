@@ -18,7 +18,6 @@ package gosdk
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -57,16 +56,9 @@ func (w *server) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
 	}
 
 	w.s.AddTool(mcpTool, func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Absent arguments are an empty object. Arguments that are not a JSON
-		// object are passed on as nil, which the handler reports back to the
-		// model as a correctable tool error instead of a protocol error.
-		args := map[string]any{}
-		if len(request.Params.Arguments) > 0 {
-			if err := json.Unmarshal(request.Params.Arguments, &args); err != nil {
-				args = nil
-			}
-		}
-		toolRequest := &runtime.CallToolRequest{Arguments: args}
+		// The arguments are passed on undecoded: the handler limits their size
+		// before decoding them.
+		toolRequest := &runtime.CallToolRequest{Arguments: request.Params.Arguments}
 		if request.Extra != nil {
 			toolRequest.Header = request.Extra.Header
 		}

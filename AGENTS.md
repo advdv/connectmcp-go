@@ -53,6 +53,7 @@ h, err := connectmcp.NewHandler(server,             // http.Handler, streamable 
     connectmcp.WithServerInfo("name", "1.0"),
     connectmcp.WithStreamableHTTPOptions(&mcp.StreamableHTTPOptions{Stateless: true}),
     connectmcp.WithToolFilter(keep),
+    connectmcp.WithReadMaxBytes(1<<20),                 // tool arguments; default 4 MiB like connecthttp
 )
 ```
 
@@ -84,6 +85,11 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
   failed call (`runtime.HandleError`), with a `google.rpc.BadRequest` detail when one field is to blame
   (named as in the input schema). Interceptors see that same error; the client gets it regardless of
   how interceptors rewrite it, so the model always learns what to fix.
+- `WithReadMaxBytes` (default 4 MiB, 0 = unlimited) limits the raw JSON of the tool arguments, checked
+  in `Receive` before decoding, with connecthttp's `RESOURCE_EXHAUSTED` "message is larger than
+  configured max N" error, which, like an argument error, the client gets whatever interceptors do.
+  `runtime.CallToolRequest.Arguments` is therefore the undecoded `json.RawMessage`. It limits the message,
+  not the HTTP body that go-sdk reads in full.
 - Forwarding to a remote: register a generated connect client as the handler on a connect server.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
 - `pkg/gen` works with any protoreflect descriptor

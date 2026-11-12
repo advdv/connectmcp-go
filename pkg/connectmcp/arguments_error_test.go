@@ -56,9 +56,8 @@ func (s *wktServer) ProcessWellKnownTypes(context.Context, *testdata.ProcessWell
 }
 
 func callWithJSON(g *WithT, h runtime.ToolHandler, args string) *runtime.CallToolResult {
-	var m map[string]any
-	g.Expect(json.Unmarshal([]byte(args), &m)).To(Succeed())
-	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: m})
+	g.Expect(json.Valid([]byte(args))).To(BeTrue())
+	res, err := h(context.Background(), &runtime.CallToolRequest{Arguments: json.RawMessage(args)})
 	// Bad arguments must never surface as a protocol-level error: the model
 	// would not see it and could not correct itself.
 	g.Expect(err).ToNot(HaveOccurred())
