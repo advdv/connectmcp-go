@@ -15,8 +15,10 @@
 package runtime
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect/v2"
@@ -36,33 +38,47 @@ type toolError struct {
 // a JSON object with the error "code", "message" and, for connect errors
 // carrying them, "details" (each rendered as protojson with an "@type").
 //
-// A connect error anywhere in err's chain supplies the code and details;
-// any other error is reported with code UNKNOWN.
+// It reveals exactly what connect-go's own server transports put on the wire
+// for a handler error (see connecthttp's scrubHandlerError), so a server
+// served as MCP discloses no more than it does over Connect, gRPC or gRPC-Web:
+//
+//   - A locally authored *connect.Error anywhere in err's chain supplies the
+//     code, message and details. Text added by wrapping it
+//     (fmt.Errorf("...: %w", cerr)) and its WithCause cause are not shown.
+//   - A remote *connect.Error (one decoded from a peer, e.g. returned by a
+//     connect client) is reported as INTERNAL without a message: a peer's
+//     verdict is not the handler's own.
+//   - context.Canceled is CANCELED and context.DeadlineExceeded (or
+//     os.ErrDeadlineExceeded) is DEADLINE_EXCEEDED, without a message.
+//   - Any other error is UNKNOWN without a message.
+//
+// Return connect.NewError(code, msg) to tell the model something; keep
+// internals in err or in WithCause for logging.
 func HandleError(err error) (*CallToolResult, error) {
 	if err == nil {
 		return nil, nil
 	}
 
-	out := toolError{
-		Code:    codeName(connect.CodeUnknown),
-		Message: err.Error(),
-	}
-
-	if cerr, ok := errors.AsType[*connect.Error](err); ok && cerr != nil {
-		out.Code = codeName(cerr.Code())
-		// Keep context added by wrapping (fmt.Errorf("...: %w", cerr)); a bare
-		// connect error reports just its message, without the code prefix.
-		if err.Error() == cerr.Error() {
-			out.Message = cerr.Message()
-		}
+	var out toolError
+	switch cerr, ok := errors.AsType[*connect.Error](err); {
+	case ok && cerr != nil && !cerr.IsRemote():
+		out = toolError{Code: codeName(cerr.Code()), Message: cerr.Message()}
 		for _, detail := range cerr.Details() {
 			out.Details = append(out.Details, detailJSON(detail))
 		}
+	case ok && cerr != nil:
+		out.Code = codeName(connect.CodeInternal)
+	case errors.Is(err, context.Canceled):
+		out.Code = codeName(connect.CodeCanceled)
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, os.ErrDeadlineExceeded):
+		out.Code = codeName(connect.CodeDeadlineExceeded)
+	default:
+		out.Code = codeName(connect.CodeUnknown)
 	}
 
 	b, marshalErr := json.Marshal(out)
 	if marshalErr != nil {
-		return NewToolResultError("Error: " + err.Error()), nil
+		return NewToolResultError(`{"code":"` + out.Code + `"}`), nil
 	}
 	return NewToolResultError(string(b)), nil
 }

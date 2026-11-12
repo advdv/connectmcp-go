@@ -1,9 +1,11 @@
 package runtime
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -51,13 +53,29 @@ func TestHandleError_NilError(t *testing.T) {
 	g.Expect(result).To(BeNil())
 }
 
-func TestHandleError_PlainError(t *testing.T) {
-	g := NewWithT(t)
+// Errors other than a local connect error carry no message, as on connect-go's
+// own transports: their text is for logs, not for the model.
+func TestHandleError_NonConnectErrors(t *testing.T) {
+	for name, tc := range map[string]struct {
+		err  error
+		code string
+	}{
+		"plain":               {fmt.Errorf("query users: %w", errors.New("pq: password authentication failed")), "UNKNOWN"},
+		"canceled":            {fmt.Errorf("load: %w", context.Canceled), "CANCELED"},
+		"deadline exceeded":   {fmt.Errorf("load: %w", context.DeadlineExceeded), "DEADLINE_EXCEEDED"},
+		"os deadline":         {fmt.Errorf("dial: %w", os.ErrDeadlineExceeded), "DEADLINE_EXCEEDED"},
+		"remote connect":      {connect.NewError(connect.CodeNotFound, "upstream detail").WithRemote(), "INTERNAL"},
+		"wrapped remote":      {fmt.Errorf("call upstream: %w", connect.NewError(connect.CodeNotFound, "upstream detail").WithRemote()), "INTERNAL"},
+		"typed nil connect":   {fmt.Errorf("oops: %w", (*connect.Error)(nil)), "UNKNOWN"},
+		"remote with details": {withDetails(t, connect.NewError(connect.CodeInvalidArgument, "bad").WithRemote(), wrapperspb.String("x")), "INTERNAL"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
 
-	resp := handleErrorJSON(t, fmt.Errorf("context: %w", errors.New("root cause")))
-	g.Expect(resp["code"]).To(Equal("UNKNOWN"))
-	g.Expect(resp["message"]).To(Equal("context: root cause"))
-	g.Expect(resp).ToNot(HaveKey("details"))
+			resp := handleErrorJSON(t, tc.err)
+			g.Expect(resp).To(Equal(map[string]any{"code": tc.code}))
+		})
+	}
 }
 
 func TestHandleError_ConnectErrorCodes(t *testing.T) {
@@ -175,8 +193,9 @@ func TestHandleError_Details(t *testing.T) {
 	})
 }
 
-// A connect error found deeper in the chain still supplies the code and
-// details, while the context added by wrapping stays visible to the model.
+// A local connect error found deeper in the chain supplies the code, message
+// and details. Neither the text added by wrapping nor the cause is shown: like
+// connect-go's transports, only the connect error's own message is.
 func TestHandleError_WrappedConnectError(t *testing.T) {
 	inner := withDetails(t,
 		connect.NewError(connect.CodeNotFound, "entity not found"),
@@ -188,7 +207,7 @@ func TestHandleError_WrappedConnectError(t *testing.T) {
 
 		resp := handleErrorJSON(t, fmt.Errorf("middleware: %w", fmt.Errorf("handler: %w", inner)))
 		g.Expect(resp["code"]).To(Equal("NOT_FOUND"))
-		g.Expect(resp["message"]).To(Equal("middleware: handler: not_found: entity not found"))
+		g.Expect(resp["message"]).To(Equal("entity not found"))
 		g.Expect(resp["details"]).To(HaveLen(1))
 	})
 
@@ -197,8 +216,7 @@ func TestHandleError_WrappedConnectError(t *testing.T) {
 
 		resp := handleErrorJSON(t, errors.Join(inner, errors.New("additional context")))
 		g.Expect(resp["code"]).To(Equal("NOT_FOUND"))
-		g.Expect(resp["message"]).To(ContainSubstring("entity not found"))
-		g.Expect(resp["message"]).To(ContainSubstring("additional context"))
+		g.Expect(resp["message"]).To(Equal("entity not found"))
 	})
 
 	t.Run("cause is not leaked", func(t *testing.T) {
@@ -209,5 +227,13 @@ func TestHandleError_WrappedConnectError(t *testing.T) {
 			WithCause(errors.New("db password is hunter2"))
 		resp := handleErrorJSON(t, cerr)
 		g.Expect(resp["message"]).To(Equal("something went wrong"))
+	})
+
+	t.Run("local error wrapping a context error keeps its own code", func(t *testing.T) {
+		g := NewWithT(t)
+
+		cerr := connect.NewError(connect.CodeUnavailable, "try again").WithCause(context.Canceled)
+		resp := handleErrorJSON(t, cerr)
+		g.Expect(resp).To(Equal(map[string]any{"code": "UNAVAILABLE", "message": "try again"}))
 	})
 }

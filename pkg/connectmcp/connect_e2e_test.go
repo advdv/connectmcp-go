@@ -3,6 +3,7 @@ package connectmcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,6 +43,23 @@ func (*connectTestService) GetItem(_ context.Context, req *testdata.GetItemReque
 	return nil, connect.NewError(connect.CodeNotFound, "no such item").WithDetail(detail)
 }
 
+// trustUpstreamErrors is the README's interceptor for a forwarding server: it
+// re-authors a remote connect error as the server's own, so its code, message
+// and details reach the client instead of a bare INTERNAL.
+func trustUpstreamErrors(next connect.ServerFunc) connect.ServerFunc {
+	return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+		err := next(ctx, spec, stream)
+		if cerr, ok := errors.AsType[*connect.Error](err); ok && cerr != nil && cerr.IsRemote() {
+			local := connect.NewError(cerr.Code(), cerr.Message()).WithCause(err)
+			for _, detail := range cerr.Details() {
+				local = local.WithDetail(detail)
+			}
+			return local
+		}
+		return err
+	}
+}
+
 // TestConnectV2_E2E drives MCP tool calls through a generated connect-go v2
 // client into a connect server, over both the in-process transport and HTTP.
 func TestConnectV2_E2E(t *testing.T) {
@@ -78,11 +96,25 @@ func TestConnectV2_E2E(t *testing.T) {
 			g.Expect(created["isError"]).To(BeNil())
 			g.Expect(created["structuredContent"]).To(Equal(map[string]any{"id": "created-Widget"}))
 
-			// Failure: the connect error's code, message and details reach the
-			// model as a tool error.
+			// Failure: the upstream's error is remote to the forwarding server,
+			// so, as over connect-go's own transports, the model only learns
+			// that the call failed.
 			failed := callTool(t, mcpServer, "testdata_TestService_GetItem", map[string]any{"id": "item-1"})
 			g.Expect(failed["isError"]).To(Equal(true))
 			var toolErr map[string]any
+			g.Expect(json.Unmarshal([]byte(firstTextContent(t, failed)), &toolErr)).To(Succeed())
+			g.Expect(toolErr).To(Equal(map[string]any{"code": "INTERNAL"}))
+
+			// A forwarding server that re-authors upstream errors as its own
+			// (the README recipe) passes their code, message and details on.
+			trusting := mcptest.NewServer(t)
+			forwarder := connect.NewServer(trustUpstreamErrors)
+			testdataconnect.RegisterTestServiceHandler(forwarder, client)
+			g.Expect(Register(trusting, forwarder)).To(Succeed())
+
+			failed = callTool(t, trusting, "testdata_TestService_GetItem", map[string]any{"id": "item-1"})
+			g.Expect(failed["isError"]).To(Equal(true))
+			toolErr = nil
 			g.Expect(json.Unmarshal([]byte(firstTextContent(t, failed)), &toolErr)).To(Succeed())
 			g.Expect(toolErr).To(Equal(map[string]any{
 				"code":    "NOT_FOUND",
@@ -95,13 +127,14 @@ func TestConnectV2_E2E(t *testing.T) {
 			}))
 
 			// Unimplemented methods are reported, not dropped.
-			unimplemented := callTool(t, mcpServer, "testdata_TestService_TestValidation", map[string]any{})
+			unimplemented := callTool(t, trusting, "testdata_TestService_TestValidation", map[string]any{})
 			g.Expect(unimplemented["isError"]).To(Equal(true))
 			g.Expect(firstTextContent(t, unimplemented)).To(ContainSubstring(`"code":"UNIMPLEMENTED"`))
 
 			// Every tool call went through the connect server's interceptors.
 			g.Expect(procedures).To(Equal([]string{
 				"/testdata.TestService/CreateItem",
+				"/testdata.TestService/GetItem",
 				"/testdata.TestService/GetItem",
 				"/testdata.TestService/TestValidation",
 			}))

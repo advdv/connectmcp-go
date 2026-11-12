@@ -90,7 +90,11 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
 - Tool registration is MCP-library-agnostic via the runtime.MCPServer interface; runtime/gosdk
   bridges to the official MCP go-sdk
 - Connect-only, no gRPC
-- `runtime.HandleError` maps `*connect.Error` (code, message, details) to a JSON tool error; other errors are `UNKNOWN`
+- `runtime.HandleError` maps an error to a JSON tool error revealing exactly what connect-go's transports
+  put on the wire (`scrubHandlerError` in connecthttp): a local `*connect.Error` keeps its code,
+  `Message()` and details (wrapping text and causes are dropped); a remote one is `INTERNAL`, context
+  errors are `CANCELED`/`DEADLINE_EXCEEDED`, anything else `UNKNOWN`, all without a message. Forwarding
+  servers re-author remote errors in an interceptor to pass them on (README, `connect_e2e_test.go`)
 
 ## Testing
 

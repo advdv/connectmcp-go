@@ -13,7 +13,7 @@
 - [x] **Both oneof alternatives in OpenAI mode** -- Fixed: strip null oneof alternatives, keep first non-null.
 - [x] **MangleHeadIfTooLong collision** -- Fixed: SHA-256 with 10-char base36 prefix (~51 bits).
 - [x] **Extra properties leak into proto unmarshal** -- Fixed: `delete(message, prop.Name)` after extraction.
-- [x] **Wrapped connect error loses context** -- Fixed: preserve `err.Error()` when it differs from inner `connectErr.Error()`.
+- [x] **Tool errors leak internal error text** -- Fixed: `HandleError` reveals only what connect-go's transports put on the wire (`scrubHandlerError`): a local connect error's own code, message and details; remote connect errors are `INTERNAL`, context errors `CANCELED`/`DEADLINE_EXCEEDED`, others `UNKNOWN`, all without a message. This reverses the earlier "preserve wrapping context" fix.
 
 ## Migration
 

@@ -120,9 +120,29 @@ server := connect.NewServer()
 itemsv1connect.RegisterItemServiceHandler(server, client)
 ```
 
+The upstream's errors are remote to this server, so, as over connect-go's own transports, the model sees them as a bare `INTERNAL` (see [Errors](#errors)). To pass their code, message and details on, re-author them as the server's own with an interceptor:
+
+```go
+func trustUpstreamErrors(next connect.ServerFunc) connect.ServerFunc {
+    return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+        err := next(ctx, spec, stream)
+        if cerr, ok := errors.AsType[*connect.Error](err); ok && cerr != nil && cerr.IsRemote() {
+            local := connect.NewError(cerr.Code(), cerr.Message()).WithCause(err)
+            for _, detail := range cerr.Details() {
+                local = local.WithDetail(detail)
+            }
+            return local
+        }
+        return err
+    }
+}
+
+server := connect.NewServer(trustUpstreamErrors)
+```
+
 ### Errors
 
-An error returned from the RPC is given to the model as a tool error (`isError: true`) containing JSON. For a `*connect.Error` anywhere in the error chain this carries its code, message and details:
+An error returned from the RPC is given to the model as a tool error (`isError: true`) containing JSON. It reveals exactly what connect-go's own transports put on the wire for that error, so serving a server as MCP discloses nothing it would not disclose over Connect, gRPC or gRPC-Web. A `*connect.Error` created by the handler (anywhere in the error chain) supplies the code, its own message and the details:
 
 ```json
 {
@@ -132,7 +152,14 @@ An error returned from the RPC is given to the model as a tool error (`isError: 
 }
 ```
 
-Any other error is reported with code `UNKNOWN` and its `Error()` text, so in a local handler use `connect.NewError(...)` and keep internals in `.WithCause(err)`, which is never shown to the model.
+Everything else is reported by code alone, without a message:
+
+- text added by wrapping a connect error (`fmt.Errorf("...: %w", cerr)`) and its `.WithCause(err)` cause are not shown;
+- a remote `*connect.Error` (decoded from a peer, e.g. returned by a connect client) is `INTERNAL`;
+- `context.Canceled` is `CANCELED`, and `context.DeadlineExceeded` (or `os.ErrDeadlineExceeded`) is `DEADLINE_EXCEEDED`;
+- any other error is `UNKNOWN`.
+
+So return `connect.NewError(...)` with a message meant for the model, and keep internals in the wrapped error or in `.WithCause(err)` for logging.
 
 ### Using grpc-go
 
