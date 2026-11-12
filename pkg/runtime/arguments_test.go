@@ -15,11 +15,16 @@
 package runtime_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	. "github.com/onsi/gomega"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -139,4 +144,79 @@ func TestUnmarshalArguments_NoSingleFieldToBlame(t *testing.T) {
 	if strings.Contains(err.Error(), "field \"") {
 		t.Errorf("no single field should be named: %s", err)
 	}
+}
+
+// A failure on one field is an *ArgumentsError naming the field as the input
+// schema does (its proto name), even when the model sent the JSON name, and
+// without protojson's own text, which uses the JSON name.
+func TestUnmarshalArguments_ArgumentsError(t *testing.T) {
+	for name, args := range map[string]string{
+		"proto name": `{"resource_group_id":5}`,
+		"JSON name":  `{"resourceGroupId":5}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			var req testdata.TestValidationRequest
+			err := runtime.UnmarshalArguments(mustJSON(t, args), &req)
+
+			argsErr, ok := errors.AsType[*runtime.ArgumentsError](err)
+			g.Expect(ok).To(BeTrue(), "error is %T", err)
+			g.Expect(argsErr.Field).To(Equal("resource_group_id"))
+			g.Expect(argsErr.Description).To(Equal("must be a JSON string, but got the number 5."))
+			g.Expect(err.Error()).To(Equal(`invalid tool arguments: field "resource_group_id" ` +
+				`must be a JSON string, but got the number 5. Fix this field and call the tool again.`))
+			g.Expect(err.Error()).ToNot(ContainSubstring("resourceGroupId"))
+			g.Expect(err.Error()).ToNot(ContainSubstring("parser error"))
+		})
+	}
+}
+
+func TestUnmarshalArguments_NotAnObject(t *testing.T) {
+	g := NewWithT(t)
+	err := runtime.UnmarshalArguments(nil, &testdata.TestValidationRequest{})
+	argsErr, ok := errors.AsType[*runtime.ArgumentsError](err)
+	g.Expect(ok).To(BeTrue(), "error is %T", err)
+	g.Expect(argsErr.Field).To(BeEmpty())
+	g.Expect(err.Error()).To(ContainSubstring("must be a JSON object"))
+}
+
+// ConnectError reports bad arguments like any other failed call: as
+// INVALID_ARGUMENT, with a google.rpc.BadRequest detail when one field is to
+// blame.
+func TestArgumentsError_ConnectError(t *testing.T) {
+	t.Run("one field", func(t *testing.T) {
+		g := NewWithT(t)
+		argsErr := &runtime.ArgumentsError{Field: "items[2].page_size", Description: `must be an integer, but got the string "ten".`}
+		cerr := argsErr.ConnectError()
+
+		g.Expect(cerr.Code()).To(Equal(connect.CodeInvalidArgument))
+		g.Expect(cerr.Message()).To(Equal(argsErr.Error()))
+		g.Expect(cerr.Details()).To(HaveLen(1))
+		detail, err := connectproto.UnmarshalErrorDetail(cerr.Details()[0])
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(proto.Equal(detail, &errdetails.BadRequest{
+			FieldViolations: []*errdetails.BadRequest_FieldViolation{{
+				Field:       "items[2].page_size",
+				Description: `must be an integer, but got the string "ten".`,
+			}},
+		})).To(BeTrue(), "detail: %v", detail)
+
+		res, err := runtime.HandleError(cerr)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(res.Text).To(MatchJSON(`{
+			"code": "INVALID_ARGUMENT",
+			"message": "invalid tool arguments: field \"items[2].page_size\" must be an integer, but got the string \"ten\". Fix this field and call the tool again.",
+			"details": [{
+				"@type": "type.googleapis.com/google.rpc.BadRequest",
+				"fieldViolations": [{"field": "items[2].page_size", "description": "must be an integer, but got the string \"ten\"."}]
+			}]
+		}`))
+	})
+
+	t.Run("no single field", func(t *testing.T) {
+		g := NewWithT(t)
+		cerr := (&runtime.ArgumentsError{Description: "two members of oneof item_type are set"}).ConnectError()
+		g.Expect(cerr.Code()).To(Equal(connect.CodeInvalidArgument))
+		g.Expect(cerr.Details()).To(BeEmpty())
+	})
 }

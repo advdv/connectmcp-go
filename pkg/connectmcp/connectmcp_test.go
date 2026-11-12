@@ -2,11 +2,14 @@ package connectmcp_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
@@ -14,6 +17,7 @@ import (
 	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	. "github.com/onsi/gomega"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -181,9 +185,23 @@ func inMemorySession(t *testing.T, mcpServer *mcp.Server) *mcp.ClientSession {
 	return session
 }
 
-// TestRegister_BadArguments checks that undecodable arguments are reported in
-// model-readable form without reaching the service, also when an interceptor
-// rewrites the error.
+// toolError is the JSON every failed tool call returns, see runtime.HandleError.
+type toolError struct {
+	Code    string           `json:"code"`
+	Message string           `json:"message"`
+	Details []map[string]any `json:"details"`
+}
+
+func parseToolError(g *WithT, res *mcp.CallToolResult) toolError {
+	g.Expect(res.IsError).To(BeTrue())
+	var out toolError
+	g.Expect(json.Unmarshal([]byte(text(res)), &out)).To(Succeed(), "tool error is not JSON: %s", text(res))
+	return out
+}
+
+// TestRegister_BadArguments checks that undecodable arguments are reported as
+// an INVALID_ARGUMENT tool error without reaching the service, also when an
+// interceptor rewrites the error.
 func TestRegister_BadArguments(t *testing.T) {
 	svc := &service{}
 	server := connect.NewServer(func(next connect.ServerFunc) connect.ServerFunc {
@@ -211,19 +229,113 @@ func TestRegister_BadArguments(t *testing.T) {
 			g := NewWithT(t)
 			res, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: createItemTool, Arguments: args})
 			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(res.IsError).To(BeTrue())
-			g.Expect(text(res)).ToNot(ContainSubstring("redacted"))
+			toolErr := parseToolError(g, res)
+			g.Expect(toolErr.Code).To(Equal("INVALID_ARGUMENT"))
+			g.Expect(toolErr.Message).To(HavePrefix("invalid tool arguments: "))
+			g.Expect(toolErr.Message).To(ContainSubstring("call the tool again"))
+			g.Expect(toolErr.Message).ToNot(ContainSubstring("redacted"))
 			g.Expect(svc.calls).To(BeZero())
 		})
 	}
 
-	t.Run("names the field and asks for a retry", func(t *testing.T) {
+	t.Run("names the field in a BadRequest detail", func(t *testing.T) {
 		g := NewWithT(t)
 		res, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: createItemTool, Arguments: map[string]any{"name": 42}})
 		g.Expect(err).ToNot(HaveOccurred())
-		g.Expect(text(res)).To(ContainSubstring(`field "name"`))
-		g.Expect(text(res)).To(ContainSubstring("call the tool again"))
+		g.Expect(text(res)).To(MatchJSON(`{
+			"code": "INVALID_ARGUMENT",
+			"message": "invalid tool arguments: field \"name\" must be a JSON string, but got the number 42. Fix this field and call the tool again.",
+			"details": [{
+				"@type": "type.googleapis.com/google.rpc.BadRequest",
+				"fieldViolations": [{"field": "name", "description": "must be a JSON string, but got the number 42."}]
+			}]
+		}`))
 	})
+}
+
+// validatingService rejects a negative age the way a validation interceptor
+// (such as protovalidate's) would: INVALID_ARGUMENT, with a detail.
+type validatingService struct {
+	testdataconnect.UnimplementedTestServiceHandler
+}
+
+func (validatingService) TestValidation(_ context.Context, req *testdata.TestValidationRequest) (*testdata.TestValidationResponse, error) {
+	if req.GetAge() < 0 {
+		detail, err := connectproto.NewErrorDetail(&errdetails.BadRequest{
+			FieldViolations: []*errdetails.BadRequest_FieldViolation{{Field: "age", Description: "must be greater than or equal to 0"}},
+		})
+		if err != nil {
+			return nil, err
+		}
+		return nil, connect.NewError(connect.CodeInvalidArgument, "validation error: age: must be greater than or equal to 0").WithDetail(detail)
+	}
+	return &testdata.TestValidationResponse{}, nil
+}
+
+// TestRegister_ArgumentErrorsLikeRPCErrors checks that a tool call rejected
+// while decoding its arguments and one rejected by the RPC come back in one
+// shape, and that the interceptors see the error the client is sent.
+func TestRegister_ArgumentErrorsLikeRPCErrors(t *testing.T) {
+	var intercepted error
+	server := connect.NewServer(func(next connect.ServerFunc) connect.ServerFunc {
+		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
+			intercepted = next(ctx, spec, stream)
+			return intercepted
+		}
+	})
+	testdataconnect.RegisterTestServiceHandler(server, validatingService{})
+
+	mcpServer := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "1.0"}, nil)
+	if err := connectmcp.Register(gosdk.Wrap(mcpServer), server); err != nil {
+		t.Fatal(err)
+	}
+	session := inMemorySession(t, mcpServer)
+	const tool = "testdata_TestService_TestValidation"
+
+	for name, tc := range map[string]struct {
+		args          map[string]any
+		field         string
+		inMessage     string
+		notInMessage  string
+		fromValidator bool
+	}{
+		"fails validation in the RPC": {
+			args: map[string]any{"age": -1}, field: "age", inMessage: "validation error", fromValidator: true,
+		},
+		"fails decoding": {
+			args: map[string]any{"age": "ten"}, field: "age", inMessage: `must be an integer, but got the string "ten"`,
+		},
+		// The model may send protojson's name for a field; the error still
+		// uses the name the input schema showed it.
+		"fails decoding, sent by JSON name": {
+			args: map[string]any{"resourceGroupId": 5}, field: "resource_group_id",
+			inMessage: `field "resource_group_id"`, notInMessage: "resourceGroupId",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := NewWithT(t)
+			intercepted = nil
+			res, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: tool, Arguments: tc.args})
+			g.Expect(err).ToNot(HaveOccurred())
+
+			toolErr := parseToolError(g, res)
+			g.Expect(toolErr.Code).To(Equal("INVALID_ARGUMENT"))
+			g.Expect(toolErr.Message).To(ContainSubstring(tc.inMessage))
+			if tc.notInMessage != "" {
+				g.Expect(text(res)).ToNot(ContainSubstring(tc.notInMessage))
+			}
+			g.Expect(toolErr.Details).To(HaveLen(1))
+			g.Expect(toolErr.Details[0]).To(HaveKeyWithValue("@type", "type.googleapis.com/google.rpc.BadRequest"))
+			g.Expect(toolErr.Details[0]["fieldViolations"]).To(ConsistOf(HaveKeyWithValue("field", tc.field)))
+
+			// What the interceptor saw is what the client got.
+			cerr, ok := errors.AsType[*connect.Error](intercepted)
+			g.Expect(ok).To(BeTrue(), "interceptor saw %v", intercepted)
+			g.Expect(cerr.Code()).To(Equal(connect.CodeInvalidArgument))
+			g.Expect(cerr.Message()).To(Equal(toolErr.Message))
+			g.Expect(cerr.Details()).To(HaveLen(len(toolErr.Details)))
+		})
+	}
 }
 
 // createItemWith returns the descriptor of TestService.CreateItem with its

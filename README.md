@@ -24,7 +24,7 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 - **No protoc plugin.** Tools are built at runtime from the descriptors of a `*connect.Server` (`connectmcp.NewHandler` / `connectmcp.Register`); no `*.pb.mcp.go` files are generated.
 - **Opt-in tools.** Only methods annotated with `(mcp.v1.tool_description)` are exposed; misconfiguration (empty description, streaming method, invalid or duplicate name) is a registration error.
 - **connect-go v2 only.** Tool calls go through `connect.Server.Call`, so interceptors run and HTTP headers become request headers. gRPC and the mark3labs/mcp-go adapter are removed; only the official go-sdk is supported.
-- **Correctable argument errors.** Undecodable arguments are returned as a tool error naming the offending field and the expected shape, so the model can retry.
+- **Correctable argument errors.** Undecodable arguments are returned as an `INVALID_ARGUMENT` tool error, in the same JSON shape as any other failed call, naming the offending field (also as a `google.rpc.BadRequest` detail) and the expected shape, so the model can retry.
 - **Removed:** descriptor-only `gen.RegisterService`, extra properties, the tool name prefix and `runtime.Option` (the filter is now `connectmcp.WithToolFilter`).
 - **Module and proto.** Go module is `github.com/advdv/protoc-gen-go-mcp`; the annotation proto is published to `buf.build/advdv/protoc-gen-go-mcp` on each release.
 - **Tooling.** Tools pinned with mise, reproducible `just generate`, golangci-lint in CI, GitHub-hosted runners.

@@ -80,8 +80,10 @@ tool := gen.ToolForMethod(methodDescriptor, "description")
 - Tool calls run through `connect.Server.Call` on a ServerStream that decodes the tool arguments into
   the handler's request message, so interceptors always run. HTTP request headers become the RPC's
   request headers; `CallInfo.Protocol` is "mcp".
-- Undecodable arguments are returned as a model-readable tool error, regardless of how interceptors
-  rewrite the resulting connect error.
+- Undecodable arguments are an `INVALID_ARGUMENT` tool error in the same JSON shape as every other
+  failed call (`runtime.HandleError`), with a `google.rpc.BadRequest` detail when one field is to blame
+  (named as in the input schema). Interceptors see that same error; the client gets it regardless of
+  how interceptors rewrite it, so the model always learns what to fix.
 - Forwarding to a remote: register a generated connect client as the handler on a connect server.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
 - `pkg/gen` works with any protoreflect descriptor

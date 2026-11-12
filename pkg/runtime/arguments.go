@@ -20,6 +20,9 @@ import (
 	"sort"
 	"strings"
 
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -28,22 +31,64 @@ import (
 
 var argumentsUnmarshalOptions = protojson.UnmarshalOptions{DiscardUnknown: true}
 
-// UnmarshalArguments unmarshals tool-call arguments, already rewritten by
-// DecodeArguments, into msg.
+// ArgumentsError is the reason tool-call arguments could not be decoded into
+// the request message. Its Error text is phrased for the model, so it can see
+// what was wrong and call the tool again with corrected arguments.
 //
-// The returned error is phrased for the model, not for an operator: callers
-// return it as a tool error result (NewToolResultError) so the model can see
-// what was wrong and call the tool again with corrected arguments. When a
-// single field is to blame, the message names that field, the JSON shape it
-// expects, and the shape that was sent.
+// Use ConnectError to report it like any other failed call: as an
+// INVALID_ARGUMENT connect error rendered by HandleError.
+type ArgumentsError struct {
+	// Field is the path of the offending field as named in the tool's input
+	// schema, e.g. "page_size" or "items[2].name". It is empty when no single
+	// field is to blame.
+	Field string
+	// Description says what is wrong: with Field when it is set (e.g. `must
+	// be an integer, but got the string "ten".`), otherwise with the
+	// arguments as a whole.
+	Description string
+}
+
+func (e *ArgumentsError) Error() string {
+	if e.Field != "" {
+		return fmt.Sprintf("invalid tool arguments: field %q %s Fix this field and call the tool again.",
+			e.Field, e.Description)
+	}
+	return fmt.Sprintf("invalid tool arguments: %s. "+
+		"Check the arguments against the tool's input schema and call the tool again.", e.Description)
+}
+
+// ConnectError returns e as an INVALID_ARGUMENT connect error with e's text as
+// its message. When a single field is to blame, the error carries a
+// google.rpc.BadRequest detail with one field violation for it.
+func (e *ArgumentsError) ConnectError() *connect.Error {
+	cerr := connect.NewError(connect.CodeInvalidArgument, e.Error())
+	if e.Field == "" {
+		return cerr
+	}
+	detail, err := connectproto.NewErrorDetail(&errdetails.BadRequest{
+		FieldViolations: []*errdetails.BadRequest_FieldViolation{{
+			Field:       e.Field,
+			Description: e.Description,
+		}},
+	})
+	if err != nil {
+		return cerr
+	}
+	return cerr.WithDetail(detail)
+}
+
+// UnmarshalArguments unmarshals tool-call arguments, already rewritten by
+// DecodeArguments, into msg. A failure is returned as an *ArgumentsError.
+//
+// When a single field is to blame, the error names that field, the JSON shape
+// it expects, and the shape that was sent.
 func UnmarshalArguments(args map[string]any, msg proto.Message) error {
 	if args == nil {
-		return fmt.Errorf("invalid tool arguments: the arguments must be a JSON object " +
-			"matching the tool's input schema. Call the tool again with an object")
+		return &ArgumentsError{Description: "the arguments must be a JSON object matching the tool's input schema"}
 	}
 	b, err := json.Marshal(args)
 	if err != nil {
-		return fmt.Errorf("invalid tool arguments: %v", err)
+		return &ArgumentsError{Description: err.Error()}
 	}
 	if err := argumentsUnmarshalOptions.Unmarshal(b, msg); err != nil {
 		return argumentsError(msg.ProtoReflect().Descriptor(), args, err)
@@ -51,14 +96,18 @@ func UnmarshalArguments(args map[string]any, msg proto.Message) error {
 	return nil
 }
 
-func argumentsError(md protoreflect.MessageDescriptor, args map[string]any, cause error) error {
+// argumentsError explains a protojson failure. When one field is to blame the
+// parser's own text is left out: it names fields by their JSON name
+// ("pageSize"), not the name the input schema showed the model ("page_size").
+func argumentsError(md protoreflect.MessageDescriptor, args map[string]any, cause error) *ArgumentsError {
 	if bad, ok := findInvalidField(md, args, ""); ok {
-		return fmt.Errorf("invalid tool arguments: field %q must be %s, but got %s.%s "+
-			"Fix this field and call the tool again. (parser error: %v)",
-			bad.path, bad.expected, describeJSON(bad.value), stringHint(bad.value, bad.wantsStructured), cause)
+		return &ArgumentsError{
+			Field: bad.path,
+			Description: fmt.Sprintf("must be %s, but got %s.%s",
+				bad.expected, describeJSON(bad.value), stringHint(bad.value, bad.wantsStructured)),
+		}
 	}
-	return fmt.Errorf("invalid tool arguments: %v. "+
-		"Check the arguments against the tool's input schema and call the tool again", cause)
+	return &ArgumentsError{Description: cause.Error()}
 }
 
 type invalidField struct {
@@ -92,7 +141,9 @@ func findInvalidField(md protoreflect.MessageDescriptor, obj map[string]any, pre
 		if fieldUnmarshals(md, key, val) {
 			continue
 		}
-		path := prefix + key
+		// The input schema names fields by their proto name, whichever of
+		// the two names the model sent.
+		path := prefix + string(fd.Name())
 
 		switch {
 		case fd.IsList():

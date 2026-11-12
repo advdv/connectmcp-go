@@ -29,6 +29,7 @@ package connectmcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -191,9 +192,11 @@ func toolHandler(server *connect.Server, spec connect.Spec) runtime.ToolHandler 
 		err := server.Call(ctx, spec.Procedure, info, stream)
 		switch {
 		case stream.argsErr != nil:
-			// Bad arguments are reported in a form the model can act on,
-			// whatever the handler and interceptors made of the failure.
-			return runtime.NewToolResultError(stream.argsErr.Error()), nil
+			// Bad arguments are reported as the INVALID_ARGUMENT error the
+			// interceptors saw, in the shape of every other tool error,
+			// whatever the interceptors returned in its place: a rewritten
+			// error would hide from the model what to fix.
+			return runtime.HandleError(stream.argsErr)
 		case err != nil:
 			return runtime.HandleError(err)
 		case stream.response == nil:
@@ -210,8 +213,9 @@ type toolStream struct {
 	args     map[string]any
 	received bool
 
-	// argsErr is the model-readable reason the arguments could not be decoded.
-	argsErr  error
+	// argsErr is the error Receive returned because the arguments could not
+	// be decoded.
+	argsErr  *connect.Error
 	response []byte
 }
 
@@ -229,18 +233,22 @@ func (s *toolStream) Receive(msg any) error {
 	// protojson-native shape, then unmarshal.
 	if s.args != nil {
 		if err := runtime.DecodeArguments(req.ProtoReflect().Descriptor(), s.args); err != nil {
-			return s.badArguments(err)
+			return s.badArguments(&runtime.ArgumentsError{Description: err.Error()})
 		}
 	}
 	if err := runtime.UnmarshalArguments(s.args, req); err != nil {
-		return s.badArguments(err)
+		argsErr, ok := errors.AsType[*runtime.ArgumentsError](err)
+		if !ok {
+			argsErr = &runtime.ArgumentsError{Description: err.Error()}
+		}
+		return s.badArguments(argsErr)
 	}
 	return nil
 }
 
-func (s *toolStream) badArguments(err error) error {
-	s.argsErr = err
-	return connect.NewError(connect.CodeInvalidArgument, err.Error())
+func (s *toolStream) badArguments(err *runtime.ArgumentsError) error {
+	s.argsErr = err.ConnectError()
+	return s.argsErr
 }
 
 func (*toolStream) SendHeaders() error { return nil }

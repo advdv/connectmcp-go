@@ -68,9 +68,15 @@ func callWithJSON(g *WithT, h runtime.ToolHandler, args string) *runtime.CallToo
 
 func expectModelReadableArgumentError(g *WithT, res *runtime.CallToolResult) {
 	g.Expect(res.IsError).To(BeTrue())
-	g.Expect(res.Text).To(ContainSubstring(`field "metadata" must be a JSON object (google.protobuf.Struct)`))
-	g.Expect(res.Text).To(ContainSubstring("exactly once, not twice"))
-	g.Expect(res.Text).To(ContainSubstring("call the tool again"))
+	var toolErr struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	g.Expect(json.Unmarshal([]byte(res.Text), &toolErr)).To(Succeed(), res.Text)
+	g.Expect(toolErr.Code).To(Equal("INVALID_ARGUMENT"))
+	g.Expect(toolErr.Message).To(ContainSubstring(`field "metadata" must be a JSON object (google.protobuf.Struct)`))
+	g.Expect(toolErr.Message).To(ContainSubstring("exactly once, not twice"))
+	g.Expect(toolErr.Message).To(ContainSubstring("call the tool again"))
 }
 
 func TestGeneratedHandler_BadArgumentsReturnToolError(t *testing.T) {
