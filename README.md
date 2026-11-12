@@ -1,20 +1,22 @@
 # `connectmcp-go`
 
 > [!WARNING]
-> This repository started as a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) and is meant for internal use. Do not rely on its stability: it may change or break without notice. Use the [upstream repository](https://github.com/redpanda-data/protoc-gen-go-mcp) instead.
+> This library is meant for internal use. Do not rely on its stability: it may change or break without notice.
 
 > [!WARNING]
-> The changes in this fork were made with the help of AI coding tools. The code has been reviewed by a human.
+> The code was written with the help of AI coding tools. It has been reviewed by a human.
 
 [![Test](https://github.com/advdv/connectmcp-go/actions/workflows/test.yml/badge.svg)](https://github.com/advdv/connectmcp-go/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/advdv/connectmcp-go)](https://goreportcard.com/report/github.com/advdv/connectmcp-go)
 
-This module serves [ConnectRPC](https://connectrpc.com) APIs as [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers, built for [connect-go v2](https://connectrpc.com/docs/go/migrating-to-v2/).
+`connectmcp-go` lets AI assistants use an API you already have. If your API is built with [ConnectRPC](https://connectrpc.com) in Go, this library offers it as a [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server, the standard way for assistants like Claude and ChatGPT to call tools.
 
-Its root package, `connectmcp`, takes your `*connect.Server` and returns an `http.Handler` that exposes annotated RPCs as MCP tools. It is a peer of `connecthttp`, which serves the same server over Connect and gRPC, and of [vanguard-go](https://github.com/connectrpc/vanguard-go), which serves it over REST. It works at runtime from the protobuf descriptors of the registered services: there is no protoc plugin and no generated MCP code.
+You mark the operations an assistant may use and describe them in your API definition. The library does the rest: each marked operation becomes a tool, with the same authentication, validation and behavior as the rest of your API. There is no second implementation to write or keep in sync.
+
+It sits next to the other ways of serving a Connect API: `connecthttp` for Connect and gRPC, and [vanguard-go](https://github.com/connectrpc/vanguard-go) for REST.
 
 > [!NOTE]
-> This repository was called `protoc-gen-go-mcp` after the upstream project, which is a protoc plugin. It no longer contains one, so it was renamed after its package, following the `<package>-go` naming of connectrpc repositories like `vanguard-go` and `otelconnect-go`.
+> This project started as a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) and has since become something quite different. Upstream is a protoc plugin that generates MCP code; this library generates nothing and works from a running connect-go v2 server instead, which is also why it was renamed. See [Changes from upstream](#changes-from-upstream) for the differences.
 
 ## Changes from upstream
 
