@@ -21,7 +21,7 @@ package testdataconnect
 import (
 	connect "connectrpc.com/connect/v2"
 	context "context"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	sync "sync"
 )
 

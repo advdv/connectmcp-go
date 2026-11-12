@@ -5,9 +5,10 @@ go_library(
     srcs = [
         "edge_cases.connect.go",
         "test_service.connect.go",
+        "tool_annotations.connect.go",
         "tool_naming.connect.go",
     ],
-    importpath = "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect",
+    importpath = "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/testdata/gen/go/testdata",

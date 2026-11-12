@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	mcpv1 "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
+	connectmcpv1 "github.com/advdv/connectmcp-go/pkg/connectmcpv1"
 )
 
 // validToolName is lowercase snake/kebab case within every LLM
@@ -31,7 +31,7 @@ func ValidateToolName(name string) error {
 	return nil
 }
 
-// ConfiguredToolName returns the (mcp.v1.tool_name) option on the
+// ConfiguredToolName returns the (connectmcp.v1.tool_name) option on the
 // method and whether it is set at all. Presence is reported separately
 // from the value so an explicitly authored empty string is
 // distinguishable from an absent option — the generator must reject
@@ -43,14 +43,14 @@ func ConfiguredToolName(method protoreflect.MethodDescriptor) (string, bool) {
 	if !ok || opts == nil {
 		return "", false
 	}
-	if !proto.HasExtension(opts, mcpv1.E_ToolName) {
+	if !proto.HasExtension(opts, connectmcpv1.E_ToolName) {
 		return "", false
 	}
-	name, _ := proto.GetExtension(opts, mcpv1.E_ToolName).(string)
+	name, _ := proto.GetExtension(opts, connectmcpv1.E_ToolName).(string)
 	return name, true
 }
 
-// ConfiguredToolDescription returns the (mcp.v1.tool_description) option on
+// ConfiguredToolDescription returns the (connectmcp.v1.tool_description) option on
 // the method and whether it is set at all. The connectmcp package exposes
 // exactly the methods that carry it.
 func ConfiguredToolDescription(method protoreflect.MethodDescriptor) (string, bool) {
@@ -58,15 +58,15 @@ func ConfiguredToolDescription(method protoreflect.MethodDescriptor) (string, bo
 	if !ok || opts == nil {
 		return "", false
 	}
-	if !proto.HasExtension(opts, mcpv1.E_ToolDescription) {
+	if !proto.HasExtension(opts, connectmcpv1.E_ToolDescription) {
 		return "", false
 	}
-	description, _ := proto.GetExtension(opts, mcpv1.E_ToolDescription).(string)
+	description, _ := proto.GetExtension(opts, connectmcpv1.E_ToolDescription).(string)
 	return description, true
 }
 
 // ToolNameForMethod resolves the MCP tool name for a method: the
-// (mcp.v1.tool_name) option when set and valid, otherwise the derived
+// (connectmcp.v1.tool_name) option when set and valid, otherwise the derived
 // full-name-based form, hash-truncated to 64 chars. Invalid configured
 // names fall back to the derived form here so a provider-rejected name is
 // never published; connectmcp additionally rejects them at registration so

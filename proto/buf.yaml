@@ -1,7 +1,7 @@
 version: v2
 modules:
   - path: .
-    name: buf.build/advdv/protoc-gen-go-mcp
+    name: buf.build/advdv/connectmcp
 lint:
   use:
     - STANDARD

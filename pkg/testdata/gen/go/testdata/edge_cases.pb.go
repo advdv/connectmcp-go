@@ -22,7 +22,7 @@ package testdata
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
+	_ "github.com/advdv/connectmcp-go/pkg/connectmcpv1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1730,7 +1730,7 @@ var File_testdata_edge_cases_proto protoreflect.FileDescriptor
 
 const file_testdata_edge_cases_proto_rawDesc = "" +
 	"\n" +
-	"\x19testdata/edge_cases.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x18mcp/v1/annotations.proto\"\x81\x02\n" +
+	"\x19testdata/edge_cases.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fconnectmcp/v1/annotations.proto\"\x81\x02\n" +
 	"\fInnerMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x04tags\x18\x02 \x03(\v2 .testdata.InnerMessage.TagsEntryR\x04tags\x123\n" +
@@ -1897,8 +1897,8 @@ const file_testdata_edge_cases_proto_rawDesc = "" +
 	"\x0eMultipleOneofs\x12\x1f.testdata.MultipleOneofsRequest\x1a .testdata.MultipleOneofsResponse\"B\x8a\xdb\x1c>MultipleOneofs tests multiple oneof groups in a single message\x12\xa1\x01\n" +
 	"\x11NumericValidation\x12\".testdata.NumericValidationRequest\x1a#.testdata.NumericValidationResponse\"C\x8a\xdb\x1c?NumericValidation tests all numeric validation constraint types\x12\x8a\x01\n" +
 	"\rRecursiveTree\x12\x1e.testdata.RecursiveTreeRequest\x1a\x1f.testdata.RecursiveTreeResponse\"8\x8a\xdb\x1c4RecursiveTree tests self-referencing message schemas\x12\xb7\x02\n" +
-	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponse\"\xe1\x01\x8a\xdb\x1c\xdc\x01OneofRecursive tests a recursive message nested inside a oneof, on both the request (decode) and response (encode) sides. It exercises the oneof discriminated-wrapper transform combined with recursion-depth placeholders.B\x9f\x01\n" +
-	"\fcom.testdataB\x0eEdgeCasesProtoP\x01Z?github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
+	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponse\"\xe1\x01\x8a\xdb\x1c\xdc\x01OneofRecursive tests a recursive message nested inside a oneof, on both the request (decode) and response (encode) sides. It exercises the oneof discriminated-wrapper transform combined with recursion-depth placeholders.B\x9b\x01\n" +
+	"\fcom.testdataB\x0eEdgeCasesProtoP\x01Z;github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
 
 var (
 	file_testdata_edge_cases_proto_rawDescOnce sync.Once

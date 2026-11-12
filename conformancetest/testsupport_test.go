@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go"
+	"github.com/advdv/connectmcp-go/pkg/gen"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

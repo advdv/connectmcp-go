@@ -1,0 +1,119 @@
+// Copyright 2025 Redpanda Data, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package testdata;
+
+import "connectmcp/v1/annotations.proto";
+
+message Workspace {
+  string id = 1;
+  string name = 2;
+}
+
+message GetWorkspaceRequest {
+  string id = 1;
+}
+
+message ListWorkspacesRequest {}
+
+message ListWorkspacesResponse {
+  repeated Workspace workspaces = 1;
+}
+
+message CreateWorkspaceRequest {
+  string name = 1;
+}
+
+message UpdateWorkspaceRequest {
+  Workspace workspace = 1;
+}
+
+message DeleteWorkspaceRequest {
+  string id = 1;
+}
+
+message DeleteWorkspaceResponse {}
+
+message ArchiveWorkspaceRequest {
+  string id = 1;
+}
+
+// WorkspaceService shows how MCP tool annotations follow from a method's
+// idempotency_level and its (connectmcp.v1.tool_annotations) option.
+service WorkspaceService {
+  // Read-only: NO_SIDE_EFFECTS announces readOnlyHint (and idempotentHint,
+  // destructiveHint false).
+  rpc GetWorkspace(GetWorkspaceRequest) returns (Workspace) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (connectmcp.v1.tool_name) = "get_workspace";
+    option (connectmcp.v1.tool_description) = "Look up one workspace by its ID.";
+    option (connectmcp.v1.tool_annotations) = {
+      title: "Get workspace"
+      open_world_hint: false
+    };
+  }
+
+  rpc ListWorkspaces(ListWorkspacesRequest) returns (ListWorkspacesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (connectmcp.v1.tool_name) = "list_workspaces";
+    option (connectmcp.v1.tool_description) = "List all workspaces.";
+    option (connectmcp.v1.tool_annotations) = {
+      title: "List workspaces"
+      open_world_hint: false
+    };
+  }
+
+  // Additive: has side effects, but destroys nothing.
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace) {
+    option (connectmcp.v1.tool_name) = "create_workspace";
+    option (connectmcp.v1.tool_description) = "Create a new workspace.";
+    option (connectmcp.v1.tool_annotations) = {
+      title: "Create workspace"
+      destructive_hint: false
+      open_world_hint: false
+    };
+  }
+
+  // Overwrites a workspace: idempotent and (by MCP's default) destructive.
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace) {
+    option idempotency_level = IDEMPOTENT;
+    option (connectmcp.v1.tool_name) = "update_workspace";
+    option (connectmcp.v1.tool_description) = "Replace the fields of a workspace.";
+    option (connectmcp.v1.tool_annotations) = {
+      title: "Update workspace"
+      open_world_hint: false
+    };
+  }
+
+  // Removes data: idempotent and explicitly destructive.
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse) {
+    option idempotency_level = IDEMPOTENT;
+    option (connectmcp.v1.tool_name) = "delete_workspace";
+    option (connectmcp.v1.tool_description) = "Delete a workspace and all of its data.";
+    option (connectmcp.v1.tool_annotations) = {
+      title: "Delete workspace"
+      destructive_hint: true
+      open_world_hint: false
+    };
+  }
+
+  // No annotations at all: the tool carries no hints, so MCP's defaults
+  // apply (may be destructive, open world).
+  rpc ArchiveWorkspace(ArchiveWorkspaceRequest) returns (Workspace) {
+    option (connectmcp.v1.tool_name) = "archive_workspace";
+    option (connectmcp.v1.tool_description) = "Archive a workspace.";
+  }
+}

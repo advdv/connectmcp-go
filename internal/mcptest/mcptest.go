@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

@@ -19,8 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"

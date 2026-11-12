@@ -8,7 +8,7 @@ go_library(
         "server.go",
         "transform.go",
     ],
-    importpath = "github.com/advdv/protoc-gen-go-mcp/pkg/runtime",
+    importpath = "github.com/advdv/connectmcp-go/pkg/runtime",
     visibility = ["//visibility:public"],
     deps = [
         "@com_connectrpc_connect_v2//:connect",

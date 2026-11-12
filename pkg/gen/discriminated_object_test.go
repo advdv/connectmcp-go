@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"

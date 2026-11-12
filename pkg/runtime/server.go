@@ -34,6 +34,37 @@ type Tool struct {
 	Description     string
 	RawInputSchema  json.RawMessage
 	RawOutputSchema json.RawMessage
+	// Annotations describe the tool to clients; nil when there are none.
+	Annotations *ToolAnnotations
+}
+
+// ToolAnnotations are the display title and behavior hints of an MCP tool.
+// They are hints for clients (e.g. which calls to confirm with the user),
+// not guarantees. An unset hint takes MCP's default: not read-only, not
+// idempotent, possibly destructive and open world.
+type ToolAnnotations struct {
+	// Title is the human-readable name that clients display instead of the
+	// tool name.
+	Title string
+	// ReadOnlyHint tells that the tool does not modify its environment.
+	ReadOnlyHint bool
+	// DestructiveHint tells whether the tool may destroy or overwrite data
+	// (true) or only adds to it (false); nil means MCP's default, true.
+	// Meaningful only when ReadOnlyHint is false.
+	DestructiveHint *bool
+	// IdempotentHint tells that calling the tool again with the same
+	// arguments has no additional effect. Meaningful only when ReadOnlyHint
+	// is false.
+	IdempotentHint bool
+	// OpenWorldHint tells whether the tool interacts with an open world of
+	// external entities (true) or a closed domain (false); nil means MCP's
+	// default, true.
+	OpenWorldHint *bool
+}
+
+// IsZero reports whether a carries no title and no hints.
+func (a *ToolAnnotations) IsZero() bool {
+	return a == nil || *a == ToolAnnotations{}
 }
 
 // ToolHandler is the callback invoked when an MCP client calls a tool.

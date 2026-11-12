@@ -9,7 +9,7 @@ go_test(
         "testsupport_test.go",
     ],
     deps = [
-        "//pkg/connectmcp",
+        "//:connectmcp-go",
         "//pkg/gen",
         "//pkg/runtime",
         "//pkg/testdata/gen/go/testdata",

@@ -3,7 +3,7 @@ package connectmcp
 import (
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
 	. "github.com/onsi/gomega"
 )
 

@@ -3,13 +3,14 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "gen",
     srcs = [
+        "annotations.go",
         "schema.go",
         "toolname.go",
     ],
-    importpath = "github.com/advdv/protoc-gen-go-mcp/pkg/gen",
+    importpath = "github.com/advdv/connectmcp-go/pkg/gen",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/mcpv1",
+        "//pkg/connectmcpv1",
         "//pkg/runtime",
         "@build_buf_gen_go_bufbuild_protovalidate_protocolbuffers_go//buf/validate",
         "@org_golang_google_genproto_googleapis_api//annotations",
@@ -38,7 +39,7 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":gen"],
     deps = [
-        "//pkg/mcpv1",
+        "//pkg/connectmcpv1",
         "//pkg/runtime",
         "//pkg/testdata/gen/go/testdata",
         "@com_github_google_go_cmp//cmp",

@@ -21,7 +21,7 @@ package testdataconnect
 import (
 	connect "connectrpc.com/connect/v2"
 	context "context"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	sync "sync"
 )
 
@@ -59,9 +59,10 @@ var (
 	})
 	testServiceGetItemSpec = sync.OnceValue(func() connect.Spec {
 		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("GetItem"),
-			Procedure:  TestServiceGetItemProcedure,
+			StreamType:       connect.StreamTypeUnary,
+			Schema:           testdata.File_testdata_test_service_proto.Services().ByName("TestService").Methods().ByName("GetItem"),
+			Procedure:        TestServiceGetItemProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
 		}
 	})
 	testServiceProcessWellKnownTypesSpec = sync.OnceValue(func() connect.Spec {

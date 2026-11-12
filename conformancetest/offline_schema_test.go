@@ -27,8 +27,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/gen"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	"github.com/redpanda-data/ai-sdk-go/providers/anthropic"
 	"github.com/redpanda-data/ai-sdk-go/providers/google"
 	"github.com/redpanda-data/ai-sdk-go/providers/openai"

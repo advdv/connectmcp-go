@@ -42,7 +42,7 @@ jobs:
       if: github.event_name == 'pull_request'
       run: buf breaking proto --against ".git#branch=origin/${{ github.base_ref }},subdir=proto"
 
-    # Publishes mcp/v1/annotations.proto as buf.build/advdv/protoc-gen-go-mcp,
+    # Publishes connectmcp/v1/annotations.proto as buf.build/advdv/connectmcp,
     # labeled only with the Git SHA so consumers can pin unreleased commits
     # (matching the pseudo-version in their go.mod). Because an explicit
     # --label is given, the BSR default label ("main") is NOT moved: only

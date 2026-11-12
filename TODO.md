@@ -19,7 +19,7 @@
 
 - [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- runtime.MCPServer interface with a go-sdk adapter; the mark3labs adapter has been removed.
 - [x] **Native connect-go v2** -- connect-only (no gRPC or connect v1 forwarders).
-- [x] **Runtime only** -- the protoc plugin and generated `*.pb.mcp.go` are gone; `connectmcp` serves a `*connect.Server` from its descriptors, with tools selected by `(mcp.v1.tool_description)`.
+- [x] **Runtime only** -- the protoc plugin and generated `*.pb.mcp.go` are gone; `connectmcp` serves a `*connect.Server` from its descriptors, with tools selected by `(connectmcp.v1.tool_description)`.
 
 ## Bazel
 

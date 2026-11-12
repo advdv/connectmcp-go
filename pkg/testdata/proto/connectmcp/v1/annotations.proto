@@ -1,0 +1,91 @@
+// Vendored copy of proto/connectmcp/v1/annotations.proto for the testdata buf
+// module (buf modules cannot depend on local sibling directories).
+// Keep in sync with the source of truth at proto/connectmcp/v1/annotations.proto.
+syntax = "proto3";
+
+package connectmcp.v1;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/advdv/connectmcp-go/pkg/connectmcpv1;connectmcpv1";
+
+extend google.protobuf.MethodOptions {
+  // tool_name overrides the derived MCP tool name for this method.
+  //
+  // By default the tool name is the method's full proto name with dots
+  // replaced by underscores, hash-truncated to 64 characters when too
+  // long. Set this option to publish the method under a stable,
+  // human-chosen name instead, e.g.:
+  //
+  //   rpc GetEquityResearchReport(...) returns (...) {
+  //     option (connectmcp.v1.tool_name) = "get_equity_research_report";
+  //   }
+  //
+  // The value must match ^[a-z_][a-z0-9_-]{0,63}$ — lowercase
+  // snake/kebab case within every LLM provider's function-name rules
+  // (Gemini requires a leading letter or underscore; OpenAI restricts
+  // the charset; 64 is the strictest length limit). Lowercase is
+  // enforced so a configured name can never resemble a derived
+  // "<Service>Service_<Method>" name and is therefore passed through
+  // untouched by downstream de-mangling heuristics. connectmcp fails
+  // registration on an invalid value, or when two tools of the same
+  // connect server end up with the same name.
+  string tool_name = 58800;
+
+  // tool_description exposes this method as an MCP tool when it is served
+  // with the connectmcp package, and is the description the model sees:
+  //
+  //   rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+  //     option (connectmcp.v1.tool_description) = "Look up one item by its ID.";
+  //   }
+  //
+  // connectmcp works at runtime from the descriptors compiled into the
+  // binary, which carry options but not comments; this is why the
+  // description is an option. Methods without it are not exposed by
+  // connectmcp. The value must not be empty, and only unary methods can be
+  // tools.
+  string tool_description = 58801;
+
+  // tool_annotations sets the MCP tool annotations of this method: a
+  // display title and the behavior hints that idempotency_level cannot
+  // express. See ToolAnnotations.
+  ToolAnnotations tool_annotations = 58802;
+}
+
+// ToolAnnotations are the MCP tool annotations of a method that carries
+// (connectmcp.v1.tool_description).
+//
+// Whether a tool has side effects is not set here: connectmcp derives
+// readOnlyHint and idempotentHint from the standard idempotency_level
+// method option, the same declaration Connect uses for GET requests:
+//
+//   NO_SIDE_EFFECTS -> readOnlyHint, idempotentHint, destructiveHint false
+//   IDEMPOTENT      -> idempotentHint
+//   unset           -> no hints (MCP: not read-only, may be destructive)
+//
+// For example:
+//
+//   rpc DeleteWorkspace(...) returns (...) {
+//     option idempotency_level = IDEMPOTENT;
+//     option (connectmcp.v1.tool_description) = "Delete a workspace and its data.";
+//     option (connectmcp.v1.tool_annotations) = {
+//       title: "Delete workspace"
+//       destructive_hint: true
+//       open_world_hint: false
+//     };
+//   }
+message ToolAnnotations {
+  // title is the human-readable name of the tool that clients display
+  // instead of the tool name.
+  string title = 1;
+
+  // destructive_hint tells whether the tool may destroy or overwrite data
+  // (true) or only adds to it (false). MCP assumes true when unset. It must
+  // not be true on a NO_SIDE_EFFECTS method.
+  optional bool destructive_hint = 2;
+
+  // open_world_hint tells whether the tool interacts with an open world of
+  // external entities, like the web (true), or a closed domain, like the
+  // service's own data (false). MCP assumes true when unset.
+  optional bool open_world_hint = 3;
+}

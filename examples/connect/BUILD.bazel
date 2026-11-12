@@ -3,14 +3,17 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "connect_lib",
     srcs = ["main.go"],
-    importpath = "github.com/advdv/protoc-gen-go-mcp/examples/connect",
+    importpath = "github.com/advdv/connectmcp-go/examples/connect",
     visibility = ["//visibility:private"],
     deps = [
-        "//pkg/connectmcp",
+        "//:connectmcp-go",
+        "//pkg/runtime",
         "//pkg/testdata/gen/go/testdata",
         "//pkg/testdata/gen/go/testdata/testdataconnect",
         "@com_connectrpc_connect_v2//:connect",
         "@com_connectrpc_connect_v2//connecthttp",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
     ],
 )
 

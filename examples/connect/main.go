@@ -31,9 +31,12 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func main() {
@@ -49,9 +52,14 @@ func main() {
 	server := connect.NewServer(logRPCs(logger))
 	testdataconnect.RegisterTestServiceHandler(server, service)
 
-	// Every method carrying the (mcp.v1.tool_description) option is a tool.
+	// Every method carrying the (connectmcp.v1.tool_description) option is a tool.
+	// Its annotations come from the proto: GetItem is NO_SIDE_EFFECTS, so it
+	// is announced as read-only; CreateItem's (connectmcp.v1.tool_annotations) says
+	// it is not destructive. WithToolAnnotations adds what the protos leave
+	// out, here that every tool works on this service's own data only.
 	mcpHandler, err := connectmcp.NewHandler(server,
-		connectmcp.WithServerInfo("Example connect-go v2 MCP server", "1.0.0"))
+		connectmcp.WithServerInfo("Example connect-go v2 MCP server", "1.0.0"),
+		connectmcp.WithToolAnnotations(closedWorld))
 	if err != nil {
 		logger.Error("create MCP handler", "error", err)
 		os.Exit(1)
@@ -66,6 +74,14 @@ func main() {
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
+	}
+}
+
+// closedWorld sets openWorldHint to false on every tool that does not set it
+// in its (connectmcp.v1.tool_annotations) option.
+func closedWorld(_ string, _ protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations) {
+	if annotations.OpenWorldHint == nil {
+		annotations.OpenWorldHint = proto.Bool(false)
 	}
 }
 

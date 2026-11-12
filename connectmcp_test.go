@@ -12,11 +12,11 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go"
+	"github.com/advdv/connectmcp-go/pkg/connectmcpv1"
+	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -33,7 +33,7 @@ const (
 )
 
 // service implements TestService, whose methods all carry the
-// (mcp.v1.tool_description) option in test_service.proto.
+// (connectmcp.v1.tool_description) option in test_service.proto.
 type service struct {
 	testdataconnect.UnimplementedTestServiceHandler
 	calls int
@@ -376,24 +376,24 @@ func TestRegister_Errors(t *testing.T) {
 		want    string
 	}{
 		"nothing registered": {
-			want: "no method registered on the connect server carries the (mcp.v1.tool_description) option",
+			want: "no method registered on the connect server carries the (connectmcp.v1.tool_description) option",
 		},
 		"no annotated method": {
 			methods: []connect.Method{
 				method("/a.B/C", connect.StreamTypeUnary, createItemWith(t, func(o *descriptorpb.MethodOptions) {
-					proto.ClearExtension(o, mcpv1.E_ToolDescription)
+					proto.ClearExtension(o, connectmcpv1.E_ToolDescription)
 				})),
 				method("/a.B/NoSchema", connect.StreamTypeUnary, nil),
 			},
-			want: "no method registered on the connect server carries the (mcp.v1.tool_description) option",
+			want: "no method registered on the connect server carries the (connectmcp.v1.tool_description) option",
 		},
 		"empty description": {
 			methods: []connect.Method{
 				method("/a.B/C", connect.StreamTypeUnary, createItemWith(t, func(o *descriptorpb.MethodOptions) {
-					proto.SetExtension(o, mcpv1.E_ToolDescription, "")
+					proto.SetExtension(o, connectmcpv1.E_ToolDescription, "")
 				})),
 			},
-			want: "/a.B/C: (mcp.v1.tool_description) must not be empty",
+			want: "/a.B/C: (connectmcp.v1.tool_description) must not be empty",
 		},
 		"streaming method": {
 			methods: []connect.Method{method("/a.B/C", connect.StreamTypeServer, createItem)},
@@ -402,10 +402,10 @@ func TestRegister_Errors(t *testing.T) {
 		"invalid tool name": {
 			methods: []connect.Method{
 				method("/a.B/C", connect.StreamTypeUnary, createItemWith(t, func(o *descriptorpb.MethodOptions) {
-					proto.SetExtension(o, mcpv1.E_ToolName, "Not Valid")
+					proto.SetExtension(o, connectmcpv1.E_ToolName, "Not Valid")
 				})),
 			},
-			want: "/a.B/C: (mcp.v1.tool_name): invalid tool name",
+			want: "/a.B/C: (connectmcp.v1.tool_name): invalid tool name",
 		},
 		"duplicate tool name": {
 			methods: []connect.Method{
@@ -429,7 +429,7 @@ func TestRegister_Errors(t *testing.T) {
 	}
 }
 
-// TestRegister_ToolName checks that a valid (mcp.v1.tool_name) names the tool.
+// TestRegister_ToolName checks that a valid (connectmcp.v1.tool_name) names the tool.
 func TestRegister_ToolName(t *testing.T) {
 	g := NewWithT(t)
 	server := connect.NewServer()
@@ -437,7 +437,7 @@ func TestRegister_ToolName(t *testing.T) {
 		Spec: connect.Spec{
 			Procedure: "/testdata.TestService/CreateItem",
 			Schema: createItemWith(t, func(o *descriptorpb.MethodOptions) {
-				proto.SetExtension(o, mcpv1.E_ToolName, "create_item")
+				proto.SetExtension(o, connectmcpv1.E_ToolName, "create_item")
 			}),
 		},
 		Handler: func(context.Context, connect.Spec, connect.ServerStream) error { return nil },

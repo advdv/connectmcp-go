@@ -29,8 +29,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/gen"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
 	"github.com/google/go-cmp/cmp"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"google.golang.org/protobuf/encoding/protojson"

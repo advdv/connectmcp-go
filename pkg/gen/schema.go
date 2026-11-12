@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -96,7 +96,7 @@ func messageSchema(md protoreflect.MessageDescriptor, opts SchemaOptions, seen m
 			// discriminator key. Fail loudly rather than silently rename.
 			if name == DiscriminatorKey {
 				panic(fmt.Sprintf(
-					"protoc-gen-go-mcp: oneof %q in message %q has a member field named %q, which collides with the discriminator key; rename the field",
+					"gen: oneof %q in message %q has a member field named %q, which collides with the discriminator key; rename the field",
 					oneof.Name(), md.FullName(), DiscriminatorKey,
 				))
 			}
@@ -551,16 +551,21 @@ func MangleHeadIfTooLong(name string, maxLen int) string {
 }
 
 // ToolForMethod generates the MCP tool definition for a given RPC method
-// descriptor (input and output JSON schemas plus name and description).
+// descriptor (input and output JSON schemas plus name, description and
+// annotations, see ToolAnnotationsForMethod).
 func ToolForMethod(method protoreflect.MethodDescriptor, comment string) runtime.Tool {
 	toolName := ToolNameForMethod(method)
 	description := CleanComment(comment)
+	// On a contradiction the hints derived from idempotency_level are used;
+	// connectmcp rejects the method before getting here.
+	annotations, _ := ToolAnnotationsForMethod(method)
 
 	return runtime.Tool{
 		Name:            toolName,
 		Description:     description,
 		RawInputSchema:  marshalTopLevelSchema(method.Input(), SchemaOptions{}),
 		RawOutputSchema: marshalTopLevelSchema(method.Output(), SchemaOptions{}),
+		Annotations:     annotations,
 	}
 }
 

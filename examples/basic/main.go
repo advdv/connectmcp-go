@@ -21,10 +21,10 @@ import (
 	"os"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go"
+	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -37,7 +37,7 @@ func main() {
 	// tools are registered on.
 	raw, s := gosdk.NewServer("Example MCP server", "1.0.0")
 
-	// Expose every method that carries the (mcp.v1.tool_description) option.
+	// Expose every method that carries the (connectmcp.v1.tool_description) option.
 	if err := connectmcp.Register(s, server); err != nil {
 		fmt.Fprintf(os.Stderr, "Register tools: %v\n", err)
 		os.Exit(1)

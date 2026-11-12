@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	. "github.com/onsi/gomega"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 	"google.golang.org/protobuf/encoding/protojson"

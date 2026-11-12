@@ -9,11 +9,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	mcpv1 "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
+	connectmcpv1 "github.com/advdv/connectmcp-go/pkg/connectmcpv1"
 )
 
 // methodSpec describes one method of a test service; a non-nil
-// toolName sets the (mcp.v1.tool_name) option (including explicitly
+// toolName sets the (connectmcp.v1.tool_name) option (including explicitly
 // empty values).
 type methodSpec struct {
 	name     string
@@ -33,7 +33,7 @@ func testServiceProto(t *testing.T, serviceName string, methods []methodSpec) pr
 		}
 		if m.toolName != nil {
 			opts := &descriptorpb.MethodOptions{}
-			proto.SetExtension(opts, mcpv1.E_ToolName, *m.toolName)
+			proto.SetExtension(opts, connectmcpv1.E_ToolName, *m.toolName)
 			mdp.Options = opts
 		}
 		mdps = append(mdps, mdp)
@@ -57,7 +57,7 @@ func testServiceProto(t *testing.T, serviceName string, methods []methodSpec) pr
 }
 
 // testService builds a TestService with methods in sorted-name order;
-// a non-empty toolName sets the (mcp.v1.tool_name) option.
+// a non-empty toolName sets the (connectmcp.v1.tool_name) option.
 func testService(t *testing.T, methods map[string]string) protoreflect.ServiceDescriptor {
 	t.Helper()
 	names := make([]string, 0, len(methods))

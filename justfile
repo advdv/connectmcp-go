@@ -37,9 +37,9 @@ update-build: gazelle
 generate:
     cd proto && buf generate
     cd pkg/testdata && buf generate
-    rm -rf pkg/testdata/gen/go/mcp/
+    rm -rf pkg/testdata/gen/go/connectmcp/
     gofumpt -l -w pkg/testdata/
-    find pkg/mcpv1 -name '*.go' | xargs gofumpt -l -w
+    find pkg/connectmcpv1 -name '*.go' | xargs gofumpt -l -w
 
 # Lint code
 lint:

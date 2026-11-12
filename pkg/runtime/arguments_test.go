@@ -21,8 +21,8 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connectproto"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
 	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"

@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package testdata;
 
-import "mcp/v1/annotations.proto";
+import "connectmcp/v1/annotations.proto";
 
 message ToolNamingRequest {
   string id = 1;
@@ -27,13 +27,13 @@ message ToolNamingResponse {
 }
 
 // ToolNamingService pins the three tool-naming behaviors in golden
-// output: a configured (mcp.v1.tool_name), a plain derived name, and a
+// output: a configured (connectmcp.v1.tool_name), a plain derived name, and a
 // derived name long enough to be hash-truncated with a provider-safe
 // leading character.
 service ToolNamingService {
   // Configured: emitted exactly as authored, no service prefix.
   rpc GetDashboard(ToolNamingRequest) returns (ToolNamingResponse) {
-    option (mcp.v1.tool_name) = "get_dashboard";
+    option (connectmcp.v1.tool_name) = "get_dashboard";
   }
 
   // Derived: full proto path with underscores, unchanged behavior.

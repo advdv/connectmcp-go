@@ -21,28 +21,37 @@ import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 import "google/api/field_behavior.proto";
 import "buf/validate/validate.proto";
-import "mcp/v1/annotations.proto";
+import "connectmcp/v1/annotations.proto";
 
 // TestService provides test operations
 service TestService {
   // CreateItem creates a new item
   rpc CreateItem(CreateItemRequest) returns (CreateItemResponse) {
-    option (mcp.v1.tool_description) = "CreateItem creates a new item";
+    option (connectmcp.v1.tool_description) = "CreateItem creates a new item";
+    // Adds an item and touches nothing outside the service.
+    option (connectmcp.v1.tool_annotations) = {
+      title: "Create item"
+      destructive_hint: false
+      open_world_hint: false
+    };
   }
 
   // GetItem retrieves an item by ID
   rpc GetItem(GetItemRequest) returns (GetItemResponse) {
-    option (mcp.v1.tool_description) = "GetItem retrieves an item by ID";
+    // Read-only: announced to MCP clients as readOnlyHint.
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (connectmcp.v1.tool_description) = "GetItem retrieves an item by ID";
+    option (connectmcp.v1.tool_annotations) = {title: "Get item"};
   }
   
   // Test well-known types handling
   rpc ProcessWellKnownTypes(ProcessWellKnownTypesRequest) returns (ProcessWellKnownTypesResponse) {
-    option (mcp.v1.tool_description) = "Test well-known types handling";
+    option (connectmcp.v1.tool_description) = "Test well-known types handling";
   }
   
   // Test protovalidate constraints
   rpc TestValidation(TestValidationRequest) returns (TestValidationResponse) {
-    option (mcp.v1.tool_description) = "Test protovalidate constraints";
+    option (connectmcp.v1.tool_description) = "Test protovalidate constraints";
   }
 }
 

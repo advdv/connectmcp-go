@@ -1,5 +1,5 @@
 module(
-    name = "protoc-gen-go-mcp",
+    name = "connectmcp-go",
     version = "0.0.0",
 )
 

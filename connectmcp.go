@@ -5,15 +5,15 @@
 // Model Context Protocol. It works at runtime from the method descriptors of
 // the registered services and needs no generated code of its own.
 //
-// A method becomes a tool when it carries the (mcp.v1.tool_description)
+// A method becomes a tool when it carries the (connectmcp.v1.tool_description)
 // option; methods without it are not exposed:
 //
 //	rpc GetItem(GetItemRequest) returns (GetItemResponse) {
-//	  option (mcp.v1.tool_description) = "Look up one item by its ID.";
+//	  option (connectmcp.v1.tool_description) = "Look up one item by its ID.";
 //	}
 //
 // The tool's JSON schemas are derived from the request and response messages,
-// and its name from the method's full name or the (mcp.v1.tool_name) option.
+// and its name from the method's full name or the (connectmcp.v1.tool_name) option.
 //
 //	server := connect.NewServer(interceptors...)
 //	itemsv1connect.RegisterItemServiceHandler(server, &itemService{})
@@ -36,9 +36,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect/v2"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/gen"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+	"github.com/advdv/connectmcp-go/pkg/gen"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	"github.com/advdv/connectmcp-go/pkg/runtime/gosdk"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -58,6 +58,7 @@ type config struct {
 	implementation mcp.Implementation
 	httpOptions    *mcp.StreamableHTTPOptions
 	toolFilter     func(toolName string) bool
+	annotate       func(toolName string, method protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations)
 	readMaxBytes   int
 }
 
@@ -85,6 +86,19 @@ func WithStreamableHTTPOptions(options *mcp.StreamableHTTPOptions) Option {
 func WithToolFilter(keep func(toolName string) bool) Option {
 	return func(c *config) {
 		c.toolFilter = keep
+	}
+}
+
+// WithToolAnnotations lets code adjust the annotations of each tool after they
+// are derived from the method's idempotency_level and (connectmcp.v1.tool_annotations)
+// options. annotate is called once per registered tool (after WithToolFilter)
+// with those annotations, never nil, and may change them in place: to set a
+// hint for every tool, such as OpenWorldHint false for a service that only
+// touches its own data, or to annotate a forwarded service whose protos you do
+// not own. What annotate sets is not checked against idempotency_level.
+func WithToolAnnotations(annotate func(toolName string, method protoreflect.MethodDescriptor, annotations *runtime.ToolAnnotations)) Option {
+	return func(c *config) {
+		c.annotate = annotate
 	}
 }
 
@@ -141,9 +155,13 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 }
 
 // Register adds a tool to s for every method registered on server that carries
-// the (mcp.v1.tool_description) option. Methods without the option, and
+// the (connectmcp.v1.tool_description) option. Methods without the option, and
 // methods whose schema is not a protobuf method descriptor, are skipped. For
 // the official MCP go-sdk, wrap the *mcp.Server with gosdk.Wrap.
+//
+// Each tool is annotated from the method's idempotency_level and
+// (connectmcp.v1.tool_annotations) options (see gen.ToolAnnotationsForMethod), so
+// clients can tell a read from a delete; WithToolAnnotations adjusts that.
 //
 // Register reads the methods registered on server at the time of the call, so
 // register the services first. It returns an error, without adding any tool,
@@ -151,7 +169,9 @@ func NewHandler(server *connect.Server, opts ...Option) (http.Handler, error) {
 //   - no registered method carries the option;
 //   - the option is set to an empty description;
 //   - the option is set on a streaming method;
-//   - an (mcp.v1.tool_name) option is set to an invalid name;
+//   - an (connectmcp.v1.tool_name) option is set to an invalid name;
+//   - an (connectmcp.v1.tool_annotations) option contradicts the idempotency_level
+//     option (destructive_hint true on a NO_SIDE_EFFECTS method);
 //   - two tools end up with the same name.
 func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error {
 	config := newConfig(opts)
@@ -177,21 +197,36 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 		annotated = true
 
 		if description == "" {
-			return fmt.Errorf("connectmcp: %s: (mcp.v1.tool_description) must not be empty", spec.Procedure)
+			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_description) must not be empty", spec.Procedure)
 		}
 		if spec.StreamType != connect.StreamTypeUnary {
-			return fmt.Errorf("connectmcp: %s: (mcp.v1.tool_description) is set on a %s method, only unary methods can be tools",
+			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_description) is set on a %s method, only unary methods can be tools",
 				spec.Procedure, spec.StreamType)
 		}
 		if name, ok := gen.ConfiguredToolName(method); ok {
 			if err := gen.ValidateToolName(name); err != nil {
-				return fmt.Errorf("connectmcp: %s: (mcp.v1.tool_name): %w", spec.Procedure, err)
+				return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_name): %w", spec.Procedure, err)
 			}
+		}
+
+		if _, err := gen.ToolAnnotationsForMethod(method); err != nil {
+			return fmt.Errorf("connectmcp: %s: (connectmcp.v1.tool_annotations): %w", spec.Procedure, err)
 		}
 
 		def := gen.ToolForMethod(method, description)
 		if config.toolFilter != nil && !config.toolFilter(def.Name) {
 			continue
+		}
+		if config.annotate != nil {
+			annotations := runtime.ToolAnnotations{}
+			if def.Annotations != nil {
+				annotations = *def.Annotations
+			}
+			config.annotate(def.Name, method, &annotations)
+			def.Annotations = nil
+			if !annotations.IsZero() {
+				def.Annotations = &annotations
+			}
 		}
 		if prev, dup := names[def.Name]; dup {
 			return fmt.Errorf("connectmcp: duplicate tool name %q: claimed by both %s and %s", def.Name, prev, spec.Procedure)
@@ -200,7 +235,7 @@ func Register(s runtime.MCPServer, server *connect.Server, opts ...Option) error
 		tools = append(tools, tool{spec: spec, def: def})
 	}
 	if !annotated {
-		return fmt.Errorf("connectmcp: no method registered on the connect server carries the (mcp.v1.tool_description) option")
+		return fmt.Errorf("connectmcp: no method registered on the connect server carries the (connectmcp.v1.tool_description) option")
 	}
 
 	for _, tool := range tools {

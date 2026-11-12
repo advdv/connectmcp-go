@@ -19,9 +19,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
-	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
+	"github.com/advdv/connectmcp-go/pkg/runtime"
+	testdata "github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata"
+	"github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata/testdataconnect"
 	. "github.com/onsi/gomega"
 )
 

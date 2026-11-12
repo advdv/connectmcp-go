@@ -9,9 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  # Publishes mcp/v1/annotations.proto to buf.build/advdv/protoc-gen-go-mcp
+  # Publishes connectmcp/v1/annotations.proto to buf.build/advdv/connectmcp
   # labeled with the release tag (e.g. v1.2.3), so consumers can pin
-  # buf.build/advdv/protoc-gen-go-mcp:v1.2.3 alongside the matching Go module
+  # buf.build/advdv/connectmcp:v1.2.3 alongside the matching Go module
   # version. It also moves the default label "main" to this release, so an
   # unqualified dependency resolves to the latest release (test.yml pushes
   # main-branch commits under their SHA label only).

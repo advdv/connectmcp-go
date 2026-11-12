@@ -1,39 +1,40 @@
-# `protoc-gen-go-mcp`
+# `connectmcp-go`
 
 > [!WARNING]
-> This repository is a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) meant for internal use. Do not rely on its stability: it may change or break without notice. Use the [upstream repository](https://github.com/redpanda-data/protoc-gen-go-mcp) instead.
+> This repository started as a fork of [redpanda-data/protoc-gen-go-mcp](https://github.com/redpanda-data/protoc-gen-go-mcp) and is meant for internal use. Do not rely on its stability: it may change or break without notice. Use the [upstream repository](https://github.com/redpanda-data/protoc-gen-go-mcp) instead.
 
 > [!WARNING]
 > The changes in this fork were made with the help of AI coding tools. The code has been reviewed by a human.
 
-[![Test](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/advdv/protoc-gen-go-mcp/actions/workflows/test.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/advdv/protoc-gen-go-mcp)](https://goreportcard.com/report/github.com/advdv/protoc-gen-go-mcp)
-[![codecov](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp)
+[![Test](https://github.com/advdv/connectmcp-go/actions/workflows/test.yml/badge.svg)](https://github.com/advdv/connectmcp-go/actions/workflows/test.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/advdv/connectmcp-go)](https://goreportcard.com/report/github.com/advdv/connectmcp-go)
 
 This module serves [ConnectRPC](https://connectrpc.com) APIs as [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers, built for [connect-go v2](https://connectrpc.com/docs/go/migrating-to-v2/).
 
-Its `connectmcp` package takes your `*connect.Server` and returns an `http.Handler` that exposes annotated RPCs as MCP tools. It is a peer of `connecthttp`, which serves the same server over Connect and gRPC, and of [vanguard-go](https://github.com/connectrpc/vanguard-go), which serves it over REST. It works at runtime from the protobuf descriptors of the registered services: there is no protoc plugin and no generated MCP code.
+Its root package, `connectmcp`, takes your `*connect.Server` and returns an `http.Handler` that exposes annotated RPCs as MCP tools. It is a peer of `connecthttp`, which serves the same server over Connect and gRPC, and of [vanguard-go](https://github.com/connectrpc/vanguard-go), which serves it over REST. It works at runtime from the protobuf descriptors of the registered services: there is no protoc plugin and no generated MCP code.
 
 > [!NOTE]
-> The module is still named `protoc-gen-go-mcp` after the upstream project, which is a protoc plugin. This fork no longer contains one.
+> This repository was called `protoc-gen-go-mcp` after the upstream project, which is a protoc plugin. It no longer contains one, so it was renamed after its package, following the `<package>-go` naming of connectrpc repositories like `vanguard-go` and `otelconnect-go`.
 
 ## Changes from upstream
 
 Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-go-mcp/commit/6334690).
 
 - **No protoc plugin.** Tools are built at runtime from the descriptors of a `*connect.Server` (`connectmcp.NewHandler` / `connectmcp.Register`); no `*.pb.mcp.go` files are generated.
-- **Opt-in tools.** Only methods annotated with `(mcp.v1.tool_description)` are exposed; misconfiguration (empty description, streaming method, invalid or duplicate name) is a registration error.
+- **Opt-in tools.** Only methods annotated with `(connectmcp.v1.tool_description)` are exposed; misconfiguration (empty description, streaming method, invalid or duplicate name) is a registration error.
 - **connect-go v2 only.** Tool calls go through `connect.Server.Call`, so interceptors run and HTTP headers become request headers. gRPC and the mark3labs/mcp-go adapter are removed; only the official go-sdk is supported.
 - **Correctable argument errors.** Undecodable arguments are returned as an `INVALID_ARGUMENT` tool error, in the same JSON shape as any other failed call, naming the offending field (also as a `google.rpc.BadRequest` detail) and the expected shape, so the model can retry.
+- **Tool annotations.** Tools announce MCP's `readOnlyHint` and `idempotentHint` from the standard `idempotency_level` option, and a title, `destructiveHint` and `openWorldHint` from `(connectmcp.v1.tool_annotations)`, so clients can tell a read from a delete.
 - **Request size limit.** `connectmcp.WithReadMaxBytes` limits the size of a tool call's arguments like `connecthttp.WithReadMaxBytes` limits a request message (default 4 MiB); larger arguments are a `RESOURCE_EXHAUSTED` tool error.
 - **Removed:** descriptor-only `gen.RegisterService`, extra properties, the tool name prefix and `runtime.Option` (the filter is now `connectmcp.WithToolFilter`).
-- **Module and proto.** Go module is `github.com/advdv/protoc-gen-go-mcp`; the annotation proto is published to `buf.build/advdv/protoc-gen-go-mcp` on each release.
+- **Module and proto.** The Go module is `github.com/advdv/connectmcp-go`, with the `connectmcp` package at its root. The annotations are `connectmcp/v1/annotations.proto` in proto package `connectmcp.v1` (upstream: `mcp.v1`, same extension numbers), with Go code in `pkg/connectmcpv1`, published to `buf.build/advdv/connectmcp` on each release.
 - **Tooling.** Tools pinned with mise, reproducible `just generate`, golangci-lint in CI, GitHub-hosted runners.
 
 ## Features
 
 - Serves a connect-go v2 server as MCP in one call, through its interceptors
 - Tools are selected and described with a proto option
+- Tool annotations (read-only, idempotent, destructive, title) from `idempotency_level` and a proto option
 - JSON Schema for tool inputs and outputs derived from the request and response messages
 - Tool calls can be forwarded to a remote connect server
 - Built on [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK)
@@ -42,14 +43,14 @@ Forked from upstream at [`6334690`](https://github.com/redpanda-data/protoc-gen-
 
 ### Annotate the RPCs to expose
 
-A method becomes a tool when it carries the `(mcp.v1.tool_description)` option. Methods without it are not exposed.
+A method becomes a tool when it carries the `(connectmcp.v1.tool_description)` option. Methods without it are not exposed.
 
 ```proto
-import "mcp/v1/annotations.proto";
+import "connectmcp/v1/annotations.proto";
 
 service ItemService {
   rpc GetItem(GetItemRequest) returns (GetItemResponse) {
-    option (mcp.v1.tool_description) = "Look up one item by its ID.";
+    option (connectmcp.v1.tool_description) = "Look up one item by its ID.";
   }
 }
 ```
@@ -64,7 +65,7 @@ Generate the standard `*.pb.go` and connect-go v2 code as usual; nothing else is
 import (
     "connectrpc.com/connect/v2"
     "connectrpc.com/connect/v2/connecthttp"
-    "github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
+    "github.com/advdv/connectmcp-go"
 )
 
 server := connect.NewServer(validate.NewServerInterceptor())
@@ -80,7 +81,7 @@ mux.Handle("/mcp", mcpHandler)  // the annotated RPCs as MCP tools
 - Every tool call is dispatched with `server.Call`, so the server's interceptors (auth, validation, tracing) run for tool calls exactly as they do for RPCs.
 - The headers of the HTTP request carrying a tool call are the RPC's request headers (`CallInfo.RequestHeader()`), and `CallInfo.Protocol` is `"mcp"`.
 - `NewHandler` reads the methods registered at the time of the call, so register the services first.
-- `NewHandler` returns an error if no method is annotated, a description is empty, an annotated method is streaming, a configured tool name is invalid, or two tools share a name.
+- `NewHandler` returns an error if no method is annotated, a description is empty, an annotated method is streaming, a configured tool name is invalid, a tool annotation contradicts `idempotency_level`, or two tools share a name.
 
 Options:
 
@@ -186,17 +187,81 @@ connectmcp.NewHandler(server,
 )
 ```
 
+### Tool annotations
+
+MCP tools carry [annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations): a display title and hints that clients use to decide, for example, which calls to run without asking the user. A tool without hints is assumed to be possibly destructive and to reach into an open world, so annotate every tool.
+
+Whether a method has side effects is declared with the standard `idempotency_level` option, the same declaration Connect uses for GET requests (and [AIP](https://google.aip.dev/) for REST). `connectmcp` derives the hints from it:
+
+| `idempotency_level` | `readOnlyHint` | `idempotentHint` | `destructiveHint` |
+|---|---|---|---|
+| `NO_SIDE_EFFECTS` | `true` | `true` | `false` |
+| `IDEMPOTENT` | | `true` | |
+| unset | | | |
+
+The `(connectmcp.v1.tool_annotations)` option adds what `idempotency_level` cannot express: the `title` clients display instead of the tool name, whether a method with side effects is destructive (`destructive_hint`, `false` for one that only adds data), and whether it reaches outside the service's own domain (`open_world_hint`). A service that manages workspaces:
+
+```proto
+service WorkspaceService {
+  rpc GetWorkspace(GetWorkspaceRequest) returns (Workspace) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (connectmcp.v1.tool_description) = "Look up one workspace by its ID.";
+    option (connectmcp.v1.tool_annotations) = {title: "Get workspace", open_world_hint: false};
+  }
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (Workspace) {
+    option (connectmcp.v1.tool_description) = "Create a new workspace.";
+    option (connectmcp.v1.tool_annotations) = {title: "Create workspace", destructive_hint: false, open_world_hint: false};
+  }
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (Workspace) {
+    option idempotency_level = IDEMPOTENT;
+    option (connectmcp.v1.tool_description) = "Replace the fields of a workspace.";
+    option (connectmcp.v1.tool_annotations) = {title: "Update workspace", open_world_hint: false};
+  }
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse) {
+    option idempotency_level = IDEMPOTENT;
+    option (connectmcp.v1.tool_description) = "Delete a workspace and all of its data.";
+    option (connectmcp.v1.tool_annotations) = {title: "Delete workspace", destructive_hint: true, open_world_hint: false};
+  }
+}
+```
+
+is listed as:
+
+| Tool | `title` | `readOnlyHint` | `idempotentHint` | `destructiveHint` | `openWorldHint` |
+|---|---|---|---|---|---|
+| `GetWorkspace` | Get workspace | `true` | `true` | `false` | `false` |
+| `CreateWorkspace` | Create workspace | | | `false` | `false` |
+| `UpdateWorkspace` | Update workspace | | `true` | (default `true`) | `false` |
+| `DeleteWorkspace` | Delete workspace | | `true` | `true` | `false` |
+
+The title is sent both as the tool's `title` and as `annotations.title`, for clients of older MCP versions. `destructive_hint: true` on a `NO_SIDE_EFFECTS` method is a contradiction, and `NewHandler` returns an error for it. The full example is [`tool_annotations.proto`](pkg/testdata/proto/testdata/tool_annotations.proto).
+
+To set annotations in code, for example a default for every tool or for a forwarded service whose protos you do not own, use `connectmcp.WithToolAnnotations`. It is called for every registered tool with the annotations derived from the protos, which it may change. These changes are not checked against `idempotency_level`:
+
+```go
+connectmcp.NewHandler(server,
+    // Every tool works on this service's data only, unless its proto says otherwise.
+    connectmcp.WithToolAnnotations(func(_ string, _ protoreflect.MethodDescriptor, a *runtime.ToolAnnotations) {
+        if a.OpenWorldHint == nil {
+            a.OpenWorldHint = proto.Bool(false)
+        }
+    }),
+)
+```
+
+Annotations are hints for clients, not a security boundary: authorize tool calls in an interceptor.
+
 ### Tool naming
 
 By default a tool is named after the method's full proto name with dots replaced by underscores (`redpanda_mcps_sql_v1_SQLService_Query`). Names longer than 64 characters — the strictest provider limit — are truncated: a 10-character hash of the full name plus as much of the tail (the most specific part) as fits. The hash is forced to start with a letter because Gemini rejects function names that start with a digit.
 
-To publish a method under a stable, human-chosen name instead, set the `(mcp.v1.tool_name)` method option:
+To publish a method under a stable, human-chosen name instead, set the `(connectmcp.v1.tool_name)` method option:
 
 ```proto
-import "mcp/v1/annotations.proto";
+import "connectmcp/v1/annotations.proto";
 
 rpc GetEquityResearchReport(GetEquityResearchReportRequest) returns (GetEquityResearchReportResponse) {
-  option (mcp.v1.tool_name) = "get_equity_research_report";
+  option (connectmcp.v1.tool_name) = "get_equity_research_report";
 }
 ```
 
@@ -209,20 +274,20 @@ Depend on the annotation through the Buf Schema Registry instead of vendoring it
 ```yaml
 # buf.yaml
 deps:
-  - buf.build/advdv/protoc-gen-go-mcp
+  - buf.build/advdv/connectmcp
 ```
 
-In managed mode, keep its `go_package` so your generated `*.pb.go` code imports the `mcpv1` package from this Go module. Don't generate Go code for it yourself, because a second copy conflicts at registration:
+In managed mode, keep its `go_package` so your generated `*.pb.go` code imports the `connectmcpv1` package from this Go module. Don't generate Go code for it yourself, because a second copy conflicts at registration:
 
 ```yaml
 # buf.gen.yaml
 managed:
   disable:
     - file_option: go_package
-      module: buf.build/advdv/protoc-gen-go-mcp
+      module: buf.build/advdv/connectmcp
 ```
 
-To match the module version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/protoc-gen-go-mcp:<git-sha>`.
+To match the module version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/connectmcp:<git-sha>`.
 
 ## Development & Testing
 

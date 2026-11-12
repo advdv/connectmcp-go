@@ -22,7 +22,7 @@ package testdata
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
+	_ "github.com/advdv/connectmcp-go/pkg/connectmcpv1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -764,7 +764,7 @@ var File_testdata_test_service_proto protoreflect.FileDescriptor
 
 const file_testdata_test_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1btestdata/test_service.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x18mcp/v1/annotations.proto\"\x8a\x03\n" +
+	"\x1btestdata/test_service.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fconnectmcp/v1/annotations.proto\"\x8a\x03\n" +
 	"\x11CreateItemRequest\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x01R\vdescription\x88\x01\x01\x12?\n" +
@@ -822,14 +822,17 @@ const file_testdata_test_service_proto_rawDesc = "" +
 	"\ttimestamp\x18\x06 \x01(\x03B\a\xbaH\x04\"\x02 \x00R\ttimestamp\"L\n" +
 	"\x16TestValidationResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2\xe6\x03\n" +
-	"\vTestService\x12j\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\x8c\x04\n" +
+	"\vTestService\x12\x7f\n" +
 	"\n" +
-	"CreateItem\x12\x1b.testdata.CreateItemRequest\x1a\x1c.testdata.CreateItemResponse\"!\x8a\xdb\x1c\x1dCreateItem creates a new item\x12c\n" +
-	"\aGetItem\x12\x18.testdata.GetItemRequest\x1a\x19.testdata.GetItemResponse\"#\x8a\xdb\x1c\x1fGetItem retrieves an item by ID\x12\x8c\x01\n" +
+	"CreateItem\x12\x1b.testdata.CreateItemRequest\x1a\x1c.testdata.CreateItemResponse\"6\x8a\xdb\x1c\x1dCreateItem creates a new item\x92\xdb\x1c\x11\n" +
+	"\vCreate item\x10\x00\x18\x00\x12t\n" +
+	"\aGetItem\x12\x18.testdata.GetItemRequest\x1a\x19.testdata.GetItemResponse\"4\x8a\xdb\x1c\x1fGetItem retrieves an item by ID\x92\xdb\x1c\n" +
+	"\n" +
+	"\bGet item\x90\x02\x01\x12\x8c\x01\n" +
 	"\x15ProcessWellKnownTypes\x12&.testdata.ProcessWellKnownTypesRequest\x1a'.testdata.ProcessWellKnownTypesResponse\"\"\x8a\xdb\x1c\x1eTest well-known types handling\x12w\n" +
-	"\x0eTestValidation\x12\x1f.testdata.TestValidationRequest\x1a .testdata.TestValidationResponse\"\"\x8a\xdb\x1c\x1eTest protovalidate constraintsB\xa1\x01\n" +
-	"\fcom.testdataB\x10TestServiceProtoP\x01Z?github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
+	"\x0eTestValidation\x12\x1f.testdata.TestValidationRequest\x1a .testdata.TestValidationResponse\"\"\x8a\xdb\x1c\x1eTest protovalidate constraintsB\x9d\x01\n" +
+	"\fcom.testdataB\x10TestServiceProtoP\x01Z;github.com/advdv/connectmcp-go/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
 
 var (
 	file_testdata_test_service_proto_rawDescOnce sync.Once
