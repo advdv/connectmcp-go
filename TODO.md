@@ -18,7 +18,8 @@
 ## Migration
 
 - [x] **Migrate from mark3labs/mcp-go to modelcontextprotocol/go-sdk** -- runtime.MCPServer interface with a go-sdk adapter; the mark3labs adapter has been removed.
-- [x] **Native connect-go v2** -- generated code is connect-only (no gRPC or connect v1 forwarders); connect v2 handlers and clients register directly.
+- [x] **Native connect-go v2** -- connect-only (no gRPC or connect v1 forwarders).
+- [x] **Runtime only** -- the protoc plugin and generated `*.pb.mcp.go` are gone; `connectmcp` serves a `*connect.Server` from its descriptors, with tools selected by `(mcp.v1.tool_description)`.
 
 ## Bazel
 
@@ -26,5 +27,4 @@
 - [x] BUILD.bazel for all Go packages
 - [x] Unit tests pass in Bazel (`bazelisk test //...`)
 - [x] Conformance + integration tests build in Bazel (tagged `manual`, need API keys via `--test_env`)
-- [x] In-process golden test (`golden_test.go`) replacing sh_test + gen/go-golden
 - [x] CI integration (GitHub Actions with bazelisk)

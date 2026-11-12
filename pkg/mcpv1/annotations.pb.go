@@ -31,6 +31,14 @@ var file_mcp_v1_annotations_proto_extTypes = []protoimpl.ExtensionInfo{
 		Tag:           "bytes,58800,opt,name=tool_name",
 		Filename:      "mcp/v1/annotations.proto",
 	},
+	{
+		ExtendedType:  (*descriptorpb.MethodOptions)(nil),
+		ExtensionType: (*string)(nil),
+		Field:         58801,
+		Name:          "mcp.v1.tool_description",
+		Tag:           "bytes,58801,opt,name=tool_description",
+		Filename:      "mcp/v1/annotations.proto",
+	},
 }
 
 // Extension fields to descriptorpb.MethodOptions.
@@ -59,6 +67,21 @@ var (
 	//
 	// optional string tool_name = 58800;
 	E_ToolName = &file_mcp_v1_annotations_proto_extTypes[0]
+	// tool_description exposes this method as an MCP tool when it is served
+	// with the connectmcp package, and is the description the model sees:
+	//
+	//	rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+	//	  option (mcp.v1.tool_description) = "Look up one item by its ID.";
+	//	}
+	//
+	// connectmcp works at runtime from the descriptors compiled into the
+	// binary, which carry options but not comments; this is why the
+	// description is an option. Methods without it are not exposed by
+	// connectmcp. The value must not be empty, and only unary methods can be
+	// tools.
+	//
+	// optional string tool_description = 58801;
+	E_ToolDescription = &file_mcp_v1_annotations_proto_extTypes[1]
 )
 
 var File_mcp_v1_annotations_proto protoreflect.FileDescriptor
@@ -66,7 +89,8 @@ var File_mcp_v1_annotations_proto protoreflect.FileDescriptor
 const file_mcp_v1_annotations_proto_rawDesc = "" +
 	"\n" +
 	"\x18mcp/v1/annotations.proto\x12\x06mcp.v1\x1a google/protobuf/descriptor.proto:=\n" +
-	"\ttool_name\x12\x1e.google.protobuf.MethodOptions\x18\xb0\xcb\x03 \x01(\tR\btoolNameB4Z2github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1;mcpv1b\x06proto3"
+	"\ttool_name\x12\x1e.google.protobuf.MethodOptions\x18\xb0\xcb\x03 \x01(\tR\btoolName:K\n" +
+	"\x10tool_description\x12\x1e.google.protobuf.MethodOptions\x18\xb1\xcb\x03 \x01(\tR\x0ftoolDescriptionB4Z2github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1;mcpv1b\x06proto3"
 
 var file_mcp_v1_annotations_proto_goTypes = []any{
 	(*descriptorpb.MethodOptions)(nil), // 0: google.protobuf.MethodOptions
@@ -74,10 +98,11 @@ var file_mcp_v1_annotations_proto_goTypes = []any{
 
 var file_mcp_v1_annotations_proto_depIdxs = []int32{
 	0, // 0: mcp.v1.tool_name:extendee -> google.protobuf.MethodOptions
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	0, // [0:1] is the sub-list for extension extendee
+	0, // 1: mcp.v1.tool_description:extendee -> google.protobuf.MethodOptions
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	0, // [0:2] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
 }
 
@@ -93,7 +118,7 @@ func file_mcp_v1_annotations_proto_init() {
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mcp_v1_annotations_proto_rawDesc), len(file_mcp_v1_annotations_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   0,
-			NumExtensions: 1,
+			NumExtensions: 2,
 			NumServices:   0,
 		},
 		GoTypes:           file_mcp_v1_annotations_proto_goTypes,

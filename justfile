@@ -7,12 +7,12 @@ default:
 build:
     bazelisk build //...
 
-# Run all tests (unit, golden, conformance, integration). Needs API keys in env.
+# Run all tests (unit, conformance, integration). Needs API keys in env.
 test:
     bazelisk test //... \
         --test_env=GOOGLE_API_KEY --test_env=OPENAI_API_KEY --test_env=ANTHROPIC_API_KEY
 
-# Run unit + golden tests only (no API keys needed)
+# Run unit tests only (no API keys needed)
 test-unit:
     bazelisk test //...
 
@@ -33,21 +33,13 @@ gazelle:
 # Update BUILD files after adding/removing Go files or deps
 update-build: gazelle
 
-# Generate proto code (outside Bazel)
+# Generate proto code for the annotations and the test protos (outside Bazel)
 generate:
     cd proto && buf generate
-    # googleapis is pinned explicitly: this input does not go through buf.lock.
-    cd pkg/testdata && buf generate buf.build/googleapis/googleapis:004180b77378443887d3b55cabc00384
-    cd pkg/testdata && buf generate --include-imports --exclude-path buf/validate
-    rm -rf pkg/testdata/gen/go/buf/
+    cd pkg/testdata && buf generate
     rm -rf pkg/testdata/gen/go/mcp/
-    cd pkg/testdata && buf build -o gen/descriptors.binpb --exclude-path buf/validate
     gofumpt -l -w pkg/testdata/
     find pkg/mcpv1 -name '*.go' | xargs gofumpt -l -w
-
-# Install binary to GOPATH/bin
-install:
-    go install ./cmd/protoc-gen-go-mcp
 
 # Lint code
 lint:

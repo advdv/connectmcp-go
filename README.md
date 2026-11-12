@@ -10,128 +10,107 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/advdv/protoc-gen-go-mcp)](https://goreportcard.com/report/github.com/advdv/protoc-gen-go-mcp)
 [![codecov](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/redpanda-data/protoc-gen-go-mcp)
 
-**`protoc-gen-go-mcp`** is a [Protocol Buffers](https://protobuf.dev) compiler plugin that generates [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers for your [ConnectRPC](https://connectrpc.com) APIs, built for [connect-go v2](https://connectrpc.com/docs/go/migrating-to-v2/).
+This module serves [ConnectRPC](https://connectrpc.com) APIs as [Model Context Protocol (MCP)](https://modelcontextprotocol.io) servers, built for [connect-go v2](https://connectrpc.com/docs/go/migrating-to-v2/).
 
-It generates `*.pb.mcp.go` files for each protobuf service, enabling you to serve MCP tool calls from a service implementation, or forward them to any connect-go v2 client. Under the hood, MCP uses JSON Schema for tool inputs -- `protoc-gen-go-mcp` auto-generates these schemas from your method input descriptors.
+Its `connectmcp` package takes your `*connect.Server` and returns an `http.Handler` that exposes annotated RPCs as MCP tools. It is a peer of `connecthttp`, which serves the same server over Connect and gRPC, and of [vanguard-go](https://github.com/connectrpc/vanguard-go), which serves it over REST. It works at runtime from the protobuf descriptors of the registered services: there is no protoc plugin and no generated MCP code.
 
-Generated code programs against a one-method `runtime.MCPServer` interface and imports neither an MCP library nor an RPC library. An adapter for [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK) is included.
+> [!NOTE]
+> The module is still named `protoc-gen-go-mcp` after the upstream project, which is a protoc plugin. This fork no longer contains one.
 
 ## Features
 
-- Auto-generates MCP handlers from your `.proto` services
-- Outputs JSON Schema for method inputs
-- Wire up to connect-go v2 handlers and clients, in-process or remote
-- Easy integration with [`buf`](https://buf.build)
-- Runtime LLM provider selection -- standard MCP or OpenAI-compatible schemas
-- Ships an adapter for the official MCP go-sdk
+- Serves a connect-go v2 server as MCP in one call, through its interceptors
+- Tools are selected and described with a proto option
+- JSON Schema for tool inputs and outputs derived from the request and response messages
+- Tool calls can be forwarded to a remote connect server
+- Built on [modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) (the official SDK)
 
 ## Usage
 
-### Generate code
+### Annotate the RPCs to expose
 
-Add entry to your `buf.gen.yaml`:
-```
-...
-plugins:
-  - local:
-      - go
-      - run
-      - github.com/advdv/protoc-gen-go-mcp/cmd/protoc-gen-go-mcp@latest
-    out: ./gen/go
-    opt: paths=source_relative
-```
+A method becomes a tool when it carries the `(mcp.v1.tool_description)` option. Methods without it are not exposed.
 
-You need to generate the standard `*.pb.go` files as well. `protoc-gen-go-mcp` by defaults uses a separate subfolder `{$servicename}mcp`, and imports the `*pb.go` files -- similar to connectrpc-go.
+```proto
+import "mcp/v1/annotations.proto";
 
-After running `buf generate`, you will see a new folder for each package with protobuf Service definitions:
-
-```
-tree pkg/testdata/gen/
-gen
-  go
-    testdata
-      test_service.pb.go
-      testdataconnect/
-        test_service.connect.go
-      testdatamcp/
-        test_service.pb.mcp.go
+service ItemService {
+  rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+    option (mcp.v1.tool_description) = "Look up one item by its ID.";
+  }
+}
 ```
 
-### Setting up the MCP server
+The description is what the model sees. It is a proto option rather than the RPC's comment because the descriptors compiled into a Go binary carry options but not comments. See [Importing the annotation with Buf](#importing-the-annotation-with-buf) for how to depend on the annotation.
 
-Generated code programs against the `runtime.MCPServer` interface. The `gosdk` package adapts the official go-sdk server to it:
+Generate the standard `*.pb.go` and connect-go v2 code as usual; nothing else is generated.
+
+### Serve MCP
 
 ```go
 import (
-    "github.com/modelcontextprotocol/go-sdk/mcp"
-    "github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+    "connectrpc.com/connect/v2"
+    "connectrpc.com/connect/v2/connecthttp"
+    "github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
 )
 
-// Create server -- raw is *mcp.Server for transport, s is runtime.MCPServer for tools.
+server := connect.NewServer(validate.NewServerInterceptor())
+itemsv1connect.RegisterItemServiceHandler(server, &srv)
+
+mcpHandler, err := connectmcp.NewHandler(server)
+
+mux := http.NewServeMux()
+connecthttp.Mount(mux, server)  // the connect API
+mux.Handle("/mcp", mcpHandler)  // the annotated RPCs as MCP tools
+```
+
+- Every tool call is dispatched with `server.Call`, so the server's interceptors (auth, validation, tracing) run for tool calls exactly as they do for RPCs.
+- The headers of the HTTP request carrying a tool call are the RPC's request headers (`CallInfo.RequestHeader()`), and `CallInfo.Protocol` is `"mcp"`.
+- `NewHandler` reads the methods registered at the time of the call, so register the services first.
+- `NewHandler` returns an error if no method is annotated, a description is empty, an annotated method is streaming, a configured tool name is invalid, or two tools share a name.
+
+Options:
+
+```go
+connectmcp.NewHandler(server,
+    connectmcp.WithServerInfo("items", "1.0.0"),
+    connectmcp.WithStreamableHTTPOptions(&mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}),
+)
+```
+
+See [`examples/connect`](examples/connect) for a runnable version.
+
+### Other transports, prompts and resources
+
+`NewHandler` is a convenience around `connectmcp.Register`, which adds the tools to an MCP server you own. Use it to serve over stdio or to add prompts and resources. It programs against the one-method `runtime.MCPServer` interface; the `gosdk` package adapts the official go-sdk server to it:
+
+```go
+// raw is *mcp.Server for transport, s is runtime.MCPServer for tools.
 raw, s := gosdk.NewServer("my-server", "1.0.0")
 
-testdatamcp.RegisterTestServiceHandler(s, &srv)
+err := connectmcp.Register(s, server)
 
-// Serve over stdio
 raw.Run(ctx, &mcp.StdioTransport{})
 ```
 
-### Wiring up handlers
+See [`examples/basic`](examples/basic).
 
-Example for in-process registration:
+### Forwarding to a remote connect server
 
-```go
-srv := testServer{} // your service implementation
-
-// Register all RPC methods as tools on the MCP server
-testdatamcp.RegisterTestServiceHandler(s, &srv)
-```
-
-Each RPC method in your protobuf service becomes an MCP tool.
-
-### Runtime LLM Provider Selection
-
-You can choose LLM compatibility at runtime without regenerating code:
+In connect-go v2 a generated client has the same method signatures as a service handler, so a client can be registered as the handler. Tool calls are then forwarded:
 
 ```go
-// Option 1: Use convenience function with runtime provider selection
-testdatamcp.RegisterTestServiceHandlerWithProvider(s, &srv, runtime.LLMProviderOpenAI)
-
-// Option 2: Register specific handlers directly
-testdatamcp.RegisterTestServiceHandler(s, &srv)        // Standard MCP
-testdatamcp.RegisterTestServiceHandlerOpenAI(s, &srv)  // OpenAI-compatible
-```
-
-### Wiring up with connect-go v2
-
-In connect-go v2, generated handlers and clients share the plain `Method(ctx, *Req) (*Resp, error)` signature of the interface `protoc-gen-go-mcp` generates. Both can therefore be passed to `Register*Handler` as they are.
-
-Forward MCP tool calls to a remote connect server:
-
-```go
-client := testdataconnect.NewTestServiceClient(connect.NewClient(
+client := itemsv1connect.NewItemServiceClient(connect.NewClient(
     connecthttp.NewTransport(http.DefaultClient, "https://api.example.com"),
 ))
-testdatamcp.RegisterTestServiceHandler(s, client)
+
+server := connect.NewServer()
+itemsv1connect.RegisterItemServiceHandler(server, client)
 ```
-
-Or call a `*connect.Server` in the same process through the in-process transport, so that the server's interceptors (auth, validation, tracing) run for every tool call:
-
-```go
-server := connect.NewServer(validate.NewServerInterceptor())
-testdataconnect.RegisterTestServiceHandler(server, &srv)
-
-client := testdataconnect.NewTestServiceClient(connect.NewClient(connectinprocess.New(server)))
-testdatamcp.RegisterTestServiceHandler(s, client)
-```
-
-Passing `&srv` directly also works, but bypasses the interceptors. See [`examples/connect`](examples/connect) for a runnable version.
-
-Only unary RPCs become tools; streaming RPCs are skipped.
 
 ### Errors
 
-An error returned from a handler or client is given to the model as a tool error (`isError: true`) containing JSON. For a `*connect.Error` anywhere in the error chain this carries its code, message and details:
+An error returned from the RPC is given to the model as a tool error (`isError: true`) containing JSON. For a `*connect.Error` anywhere in the error chain this carries its code, message and details:
 
 ```json
 {
@@ -145,36 +124,16 @@ Any other error is reported with code `UNKNOWN` and its `Error()` text, so in a 
 
 ### Using grpc-go
 
-grpc-go is not supported out of the box. A grpc-go server implementation still satisfies the generated interface, but its `status` errors are reported as `UNKNOWN`, and a grpc-go client needs a small wrapper that drops the `...grpc.CallOption` parameter.
+grpc-go is not supported: tools are served from a connect-go v2 `*connect.Server`.
 
-### Extra properties
+### Tool filtering
 
-It's possible to add extra properties to MCP tools, that are not in the proto. These are written into context.
-
+`connectmcp.WithToolFilter` registers only the annotated tools for which it returns true, for example to gate writes behind a feature flag.:
 
 ```go
-// Enable URL override with custom field name and description
-option := runtime.WithExtraProperties(
-    runtime.ExtraProperty{
-        Name:        "base_url",
-        Description: "Base URL for the API",
-        Required:    true,
-        ContextKey:  MyURLOverrideKey{},
-    },
+connectmcp.NewHandler(server,
+    connectmcp.WithToolFilter(func(toolName string) bool { return !writes[toolName] }),
 )
-
-// Use with any generated function
-testdatamcp.RegisterTestServiceHandler(s, &srv, option)
-```
-
-### Tool name prefixing
-
-When registering the same service multiple times (e.g. separate database instances), use `WithNamePrefix` to namespace tools:
-
-```go
-sqlv1mcp.RegisterSQLServiceHandler(s, postgresHandler, runtime.WithNamePrefix("postgres"))
-sqlv1mcp.RegisterSQLServiceHandler(s, clickhouseHandler, runtime.WithNamePrefix("clickhouse"))
-// Tools: postgres_SQLService_Query, clickhouse_SQLService_Query, ...
 ```
 
 ### Tool naming
@@ -191,7 +150,7 @@ rpc GetEquityResearchReport(GetEquityResearchReportRequest) returns (GetEquityRe
 }
 ```
 
-The value must match `^[a-z_][a-z0-9_-]{0,63}$` — lowercase snake/kebab case within every provider's function-name rules; lowercase guarantees configured names pass untouched through consumers' de-mangling heuristics (they key on the UpperCamel `Service_` segment of derived names). Code generation fails on an invalid value and on duplicate tool names within a service (one service is one MCP server registration — different services may legitimately reuse a name). The dynamic registration path (`gen.RegisterService`) applies the same option; an invalid or colliding configured name there falls back to the derived name so a tool is never silently dropped.
+The value must match `^[a-z_][a-z0-9_-]{0,63}$` — lowercase snake/kebab case within every provider's function-name rules; lowercase guarantees configured names pass untouched through consumers' de-mangling heuristics (they key on the UpperCamel `Service_` segment of derived names). `connectmcp` returns an error for an invalid value and for two tools with the same name.
 
 #### Importing the annotation with Buf
 
@@ -203,7 +162,7 @@ deps:
   - buf.build/advdv/protoc-gen-go-mcp
 ```
 
-In managed mode, keep its `go_package` so generated code imports the `mcpv1` package from this Go module. Don't generate Go code for it yourself, because a second copy conflicts at registration:
+In managed mode, keep its `go_package` so your generated `*.pb.go` code imports the `mcpv1` package from this Go module. Don't generate Go code for it yourself, because a second copy conflicts at registration:
 
 ```yaml
 # buf.gen.yaml
@@ -213,22 +172,7 @@ managed:
       module: buf.build/advdv/protoc-gen-go-mcp
 ```
 
-To match the plugin version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/protoc-gen-go-mcp:<git-sha>`.
-
-## LLM Provider Compatibility
-
-The generator creates both standard MCP and OpenAI-compatible handlers automatically. Choose which to use at runtime.
-
-### Standard MCP
-- Full JSON Schema support (additionalProperties, anyOf, oneOf)
-- Maps represented as JSON objects
-- Well-known types use native JSON representations
-
-### OpenAI Compatible
-- Restricted JSON Schema (no additionalProperties, anyOf, oneOf)
-- Maps converted to arrays of key-value pairs
-- Well-known types (Struct, Value, ListValue) encoded as JSON strings
-- All fields marked as required with nullable unions
+To match the module version in `go.mod`, pin the label for the same Git commit: `buf.build/advdv/protoc-gen-go-mcp:<git-sha>`.
 
 ## Development & Testing
 
@@ -246,13 +190,12 @@ All commands use [just](https://github.com/casey/just):
 
 ```bash
 just build                # Build everything (Bazel)
-just test-unit            # Unit + golden tests (no API keys needed)
+just test-unit            # Unit tests (no API keys needed)
 just test                 # All tests including conformance/integration (needs API keys)
 just test-cover           # Tests with coverage report
-just generate             # Regenerate proto code + descriptor set
+just generate             # Regenerate the annotation and test proto code
 just lint                 # Run golangci-lint
 just fmt                  # Format code
-just install              # Install binary to GOPATH/bin
 just gazelle              # Sync BUILD files from go.mod
 
 # View all available commands
@@ -262,22 +205,16 @@ just --list
 ### Development Workflow
 
 ```bash
-# 1. Edit proto or generator code
+# 1. Edit protos or code
 # 2. Regenerate
 just generate
 # 3. Run tests
 just test-unit
 ```
 
-### Golden File Testing
-
-The generator uses golden file testing to ensure output consistency. Tests re-run the generator in-process from compiled descriptors and compare against checked-in `*.pb.mcp.go` files.
-
-**To add new tests:** Drop a `.proto` file in `pkg/testdata/proto/testdata/` and run `just generate`. The golden test automatically discovers all generated files and compares them.
-
 ## Proto-to-JSON Schema mapping
 
-The plugin maps protobuf types to JSON Schema. Understanding these mappings matters because LLMs see the schema, not your proto definitions.
+Protobuf types are mapped to JSON Schema. Understanding these mappings matters because LLMs see the schema, not your proto definitions.
 
 ### Scalar types
 
@@ -347,10 +284,8 @@ If the fully qualified RPC name (dots replaced with underscores) exceeds 64 char
 
 ## Limitations
 
-- Registering a service implementation directly bypasses connect interceptors. Register a client on the in-process transport instead (see "Wiring up with connect-go v2").
 - Only unary RPCs are exposed as tools.
 - Recursive message schemas lose field-level detail beyond 3 levels of nesting (see above). The LLM must encode deeper levels as JSON strings.
-- Extra properties added via `WithExtraProperties` must not collide with proto field names. If they do, the value is extracted into context and, with generated handlers, also leaks into the proto message; with dynamic registration (`gen.RegisterService`) it is removed from the arguments, so the proto field of that name can never be set.
 
 ## Feedback
 

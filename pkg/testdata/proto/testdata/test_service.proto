@@ -21,20 +21,29 @@ import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 import "google/api/field_behavior.proto";
 import "buf/validate/validate.proto";
+import "mcp/v1/annotations.proto";
 
 // TestService provides test operations
 service TestService {
   // CreateItem creates a new item
-  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse);
-  
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse) {
+    option (mcp.v1.tool_description) = "CreateItem creates a new item";
+  }
+
   // GetItem retrieves an item by ID
-  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+  rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+    option (mcp.v1.tool_description) = "GetItem retrieves an item by ID";
+  }
   
   // Test well-known types handling
-  rpc ProcessWellKnownTypes(ProcessWellKnownTypesRequest) returns (ProcessWellKnownTypesResponse);
+  rpc ProcessWellKnownTypes(ProcessWellKnownTypesRequest) returns (ProcessWellKnownTypesResponse) {
+    option (mcp.v1.tool_description) = "Test well-known types handling";
+  }
   
   // Test protovalidate constraints
-  rpc TestValidation(TestValidationRequest) returns (TestValidationResponse);
+  rpc TestValidation(TestValidationRequest) returns (TestValidationResponse) {
+    option (mcp.v1.tool_description) = "Test protovalidate constraints";
+  }
 }
 
 message CreateItemRequest {

@@ -29,7 +29,7 @@ import (
 )
 
 // decodeInto runs the full decode pipeline: DecodeArguments rewrites the map,
-// then protojson unmarshals it into msg, exactly as the generated handlers do.
+// then protojson unmarshals it into msg, exactly as the tool handlers do.
 func decodeInto(t *testing.T, msg proto.Message, args map[string]any) error {
 	t.Helper()
 	if err := runtime.DecodeArguments(msg.ProtoReflect().Descriptor(), args); err != nil {

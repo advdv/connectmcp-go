@@ -1,5 +1,0 @@
-filegroup(
-    name = "descriptors",
-    srcs = ["descriptors.binpb"],
-    visibility = ["//visibility:public"],
-)

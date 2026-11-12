@@ -22,6 +22,7 @@ package testdata
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	_ "github.com/advdv/protoc-gen-go-mcp/pkg/mcpv1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -1729,7 +1730,7 @@ var File_testdata_edge_cases_proto protoreflect.FileDescriptor
 
 const file_testdata_edge_cases_proto_rawDesc = "" +
 	"\n" +
-	"\x19testdata/edge_cases.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\"\x81\x02\n" +
+	"\x19testdata/edge_cases.proto\x12\btestdata\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bbuf/validate/validate.proto\x1a\x18mcp/v1/annotations.proto\"\x81\x02\n" +
 	"\fInnerMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x04tags\x18\x02 \x03(\v2 .testdata.InnerMessage.TagsEntryR\x04tags\x123\n" +
@@ -1885,18 +1886,18 @@ const file_testdata_edge_cases_proto_rawDesc = "" +
 	"\fPRIORITY_LOW\x10\x01\x12\x13\n" +
 	"\x0fPRIORITY_MEDIUM\x10\x02\x12\x11\n" +
 	"\rPRIORITY_HIGH\x10\x03\x12\x15\n" +
-	"\x11PRIORITY_CRITICAL\x10\x042\xfc\x05\n" +
-	"\x0fEdgeCaseService\x12J\n" +
-	"\vDeepNesting\x12\x1c.testdata.DeepNestingRequest\x1a\x1d.testdata.DeepNestingResponse\x12S\n" +
-	"\x0eAllScalarTypes\x12\x1f.testdata.AllScalarTypesRequest\x1a .testdata.AllScalarTypesResponse\x12Y\n" +
-	"\x10RepeatedMessages\x12!.testdata.RepeatedMessagesRequest\x1a\".testdata.RepeatedMessagesResponse\x12J\n" +
-	"\vMapVariants\x12\x1c.testdata.MapVariantsRequest\x1a\x1d.testdata.MapVariantsResponse\x12G\n" +
+	"\x11PRIORITY_CRITICAL\x10\x042\xc8\v\n" +
+	"\x0fEdgeCaseService\x12\x8b\x01\n" +
+	"\vDeepNesting\x12\x1c.testdata.DeepNestingRequest\x1a\x1d.testdata.DeepNestingResponse\"?\x8a\xdb\x1c;DeepNesting tests deeply nested messages with maps and WKTs\x12\x87\x01\n" +
+	"\x0eAllScalarTypes\x12\x1f.testdata.AllScalarTypesRequest\x1a .testdata.AllScalarTypesResponse\"2\x8a\xdb\x1c.AllScalarTypes tests all protobuf scalar types\x12\xa2\x01\n" +
+	"\x10RepeatedMessages\x12!.testdata.RepeatedMessagesRequest\x1a\".testdata.RepeatedMessagesResponse\"G\x8a\xdb\x1cCRepeatedMessages tests repeated message fields with inner maps/WKTs\x12\x85\x01\n" +
+	"\vMapVariants\x12\x1c.testdata.MapVariantsRequest\x1a\x1d.testdata.MapVariantsResponse\"9\x8a\xdb\x1c5MapVariants tests all map key/value type combinations\x12k\n" +
 	"\n" +
-	"EnumFields\x12\x1b.testdata.EnumFieldsRequest\x1a\x1c.testdata.EnumFieldsResponse\x12S\n" +
-	"\x0eMultipleOneofs\x12\x1f.testdata.MultipleOneofsRequest\x1a .testdata.MultipleOneofsResponse\x12\\\n" +
-	"\x11NumericValidation\x12\".testdata.NumericValidationRequest\x1a#.testdata.NumericValidationResponse\x12P\n" +
-	"\rRecursiveTree\x12\x1e.testdata.RecursiveTreeRequest\x1a\x1f.testdata.RecursiveTreeResponse\x12S\n" +
-	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponseB\x9f\x01\n" +
+	"EnumFields\x12\x1b.testdata.EnumFieldsRequest\x1a\x1c.testdata.EnumFieldsResponse\"\"\x8a\xdb\x1c\x1eEnumFields tests enum handling\x12\x97\x01\n" +
+	"\x0eMultipleOneofs\x12\x1f.testdata.MultipleOneofsRequest\x1a .testdata.MultipleOneofsResponse\"B\x8a\xdb\x1c>MultipleOneofs tests multiple oneof groups in a single message\x12\xa1\x01\n" +
+	"\x11NumericValidation\x12\".testdata.NumericValidationRequest\x1a#.testdata.NumericValidationResponse\"C\x8a\xdb\x1c?NumericValidation tests all numeric validation constraint types\x12\x8a\x01\n" +
+	"\rRecursiveTree\x12\x1e.testdata.RecursiveTreeRequest\x1a\x1f.testdata.RecursiveTreeResponse\"8\x8a\xdb\x1c4RecursiveTree tests self-referencing message schemas\x12\xb7\x02\n" +
+	"\x0eOneofRecursive\x12\x1f.testdata.OneofRecursiveRequest\x1a .testdata.OneofRecursiveResponse\"\xe1\x01\x8a\xdb\x1c\xdc\x01OneofRecursive tests a recursive message nested inside a oneof, on both the request (decode) and response (encode) sides. It exercises the oneof discriminated-wrapper transform combined with recursion-depth placeholders.B\x9f\x01\n" +
 	"\fcom.testdataB\x0eEdgeCasesProtoP\x01Z?github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata\xa2\x02\x03TXX\xaa\x02\bTestdata\xca\x02\bTestdata\xe2\x02\x14Testdata\\GPBMetadata\xea\x02\bTestdatab\x06proto3"
 
 var (

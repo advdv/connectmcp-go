@@ -1,6 +1,8 @@
 # protoc-gen-go-mcp
 
-Protoc plugin + runtime library for generating MCP (Model Context Protocol) server handlers from protobuf service definitions, targeting connect-go v2 (`connectrpc.com/connect/v2`).
+Runtime library that serves a connect-go v2 (`connectrpc.com/connect/v2`) `*connect.Server` as an MCP
+(Model Context Protocol) server. There is no protoc plugin and no generated MCP code any more; the
+module keeps the upstream name.
 
 ## Build & Test
 
@@ -11,7 +13,7 @@ just build                # bazelisk build //...
 just test-unit            # bazelisk test //... (no API keys needed)
 just test                 # All tests including conformance/integration (needs API keys)
 just test-cover           # Tests with coverage report
-just generate             # Regenerate proto code + descriptor set
+just generate             # Regenerate annotation + test proto code
 just lint                 # Run golangci-lint
 just conformancetest      # Run conformance tests against LLM providers (needs API keys)
 just gazelle              # Sync BUILD files from go.mod
@@ -20,94 +22,103 @@ just gazelle              # Sync BUILD files from go.mod
 ## Architecture
 
 ```
-cmd/protoc-gen-go-mcp/     Entry point for protoc plugin
-pkg/gen/                    Core library (THE important package):
+pkg/connectmcp/             THE entry point: NewHandler (http.Handler) and Register, on a *connect.Server
+pkg/gen/                    Core library:
   schema.go                 JSON schema generation from protoreflect descriptors
-  register.go               Dynamic MCP tool registration at runtime
-pkg/generator/              Protoc plugin: Go template output, delegates to pkg/gen
-pkg/runtime/                MCPServer interface, FixOpenAI, error handling (connect v2 errors), extra properties
+  toolname.go               Tool names and the (mcp.v1.*) method options
+pkg/runtime/                MCPServer interface, argument decoding, error handling (connect v2 errors)
   server.go                 MCPServer interface + Tool/CallToolRequest/CallToolResult types
   gosdk/                    Adapter: modelcontextprotocol/go-sdk -> runtime.MCPServer
-pkg/testdata/               Proto files + generated code for testing
+pkg/mcpv1/                  Generated Go for proto/mcp/v1/annotations.proto
+proto/                      The annotations proto, published to the BSR
+pkg/testdata/               Test protos + generated pb/connect code
 internal/mcptest/           In-memory go-sdk MCP server for tests, driven by raw JSON-RPC messages
 conformancetest/            E2E tests against real LLM providers (Gemini, OpenAI, Anthropic)
 ```
 
-### Two modes of operation
+### How it works
 
-1. **Static (codegen)**: `protoc-gen-go-mcp` generates `*.pb.mcp.go` with pre-computed schemas
-2. **Dynamic (runtime)**: `gen.RegisterService()` creates MCP tools from any `protoreflect.ServiceDescriptor` at runtime - no codegen needed. This is the proxy/gateway mode.
+`connectmcp.NewHandler(server)` exposes every method registered on a `*connect.Server` that carries
+`(mcp.v1.tool_description)` as a tool, dispatching through `connect.Server.Call`. Modeled on
+vanguard-go's `Mount`. This is the only way to create tools.
 
 ## Key APIs
 
-### Creating an MCP server
+### Serving a connect server as MCP
 ```go
-// Official go-sdk
+server := connect.NewServer(interceptors...)
+testdataconnect.RegisterTestServiceHandler(server, srv) // srv may be a generated client: forwarding
+
+h, err := connectmcp.NewHandler(server,             // http.Handler, streamable HTTP
+    connectmcp.WithServerInfo("name", "1.0"),
+    connectmcp.WithStreamableHTTPOptions(&mcp.StreamableHTTPOptions{Stateless: true}),
+    connectmcp.WithToolFilter(keep),
+)
+```
+
+### Registering on an MCP server you own (stdio, prompts, resources)
+```go
 raw, s := gosdk.NewServer("name", "1.0")    // s is runtime.MCPServer
+err := connectmcp.Register(s, server)
 raw.Run(ctx, &mcp.StdioTransport{})
-```
-
-### Static registration (from generated code)
-```go
-// srv is anything with the plain unary signatures: a service implementation,
-// a connect-go v2 handler, or a connect-go v2 client (remote or in-process).
-testdatamcp.RegisterTestServiceHandler(s, srv)
-```
-
-### Dynamic registration (runtime, no codegen)
-```go
-gen.RegisterService(s, serviceDescriptor, handler, gen.RegisterServiceOptions{
-    Provider:   runtime.LLMProviderOpenAI,
-    NewMessage: func(md protoreflect.MessageDescriptor) proto.Message { ... },
-})
 ```
 
 ### Schema generation (library use)
 ```go
-schema := gen.MessageSchema(msgDescriptor, gen.SchemaOptions{OpenAICompat: true})
-standard, openAI := gen.ToolForMethod(methodDescriptor, "description")
+schema := gen.MessageSchema(msgDescriptor, gen.SchemaOptions{})
+tool := gen.ToolForMethod(methodDescriptor, "description")
 ```
 
 ## Key Design Decisions
 
-- Two schema modes: standard MCP and OpenAI-compatible (`gen.SchemaOptions`)
-- OpenAI mode: maps -> arrays of KV pairs, all fields required, additionalProperties: false
-- Well-known types (Struct, Value, ListValue) become JSON strings in OpenAI mode
+- Runtime only: everything comes from the descriptors in `connect.Spec.Schema`. Tool selection and
+  description are a proto option because Go descriptors carry options but not comments.
+- `connectmcp` selects tools by annotation, like vanguard selects REST routes by `google.api.http`.
+  Methods without `(mcp.v1.tool_description)` are skipped; an empty description, a streaming method,
+  an invalid `(mcp.v1.tool_name)`, a duplicate tool name, or no annotated method at all is a
+  `Register` error. Register reads `server.Specs()` at call time: services must be registered first.
+- Tool calls run through `connect.Server.Call` on a ServerStream that decodes the tool arguments into
+  the handler's request message, so interceptors always run. HTTP request headers become the RPC's
+  request headers; `CallInfo.Protocol` is "mcp".
+- Undecodable arguments are returned as a model-readable tool error, regardless of how interceptors
+  rewrite the resulting connect error.
+- Forwarding to a remote: register a generated connect client as the handler on a connect server.
 - Tool names > 64 chars get hash-mangled (Claude desktop limit)
-- `pkg/gen` is fully independent of protoc - works with any protoreflect descriptor
-- Generated code and runtime are MCP-library-agnostic via runtime.MCPServer interface
-- The adapter package runtime/gosdk bridges to the official MCP go-sdk
-- Connect-only, no gRPC: connect-go v2 handlers and clients share one plain unary signature, so the
-  generated code has a single `<Service>Server` interface + `Register<Service>Handler` and imports
-  neither connect nor grpc. Forwarding to a client is just registering that client.
+- `pkg/gen` works with any protoreflect descriptor
+- Tool registration is MCP-library-agnostic via the runtime.MCPServer interface; runtime/gosdk
+  bridges to the official MCP go-sdk
+- Connect-only, no gRPC
 - `runtime.HandleError` maps `*connect.Error` (code, message, details) to a JSON tool error; other errors are `UNKNOWN`
-- Golden test re-runs generator in-process from compiled descriptors, no shell/buf at test time
 
 ## Testing
 
 - Unit tests: `go test ./pkg/...` (with -race, always)
 - Conformance tests: `go test ./conformancetest/` (needs API keys, tests skip if missing)
-- Golden test: in-process generator re-run vs checked-in `gen/go/*.pb.mcp.go`
+- connectmcp API (HTTP handler incl. stateless JSON, header forwarding, registration errors):
+  `pkg/connectmcp/connectmcp_test.go`
+- Behavioral tests inherited from the codegen era (schemas, round trips, tool filter,
+  connect E2E) live in `pkg/connectmcp/*_test.go`; `testsupport_test.go` holds their wiring
 - Edge case protos: `pkg/testdata/proto/testdata/edge_cases.proto`
-- Connect v2 E2E (in-process + HTTP transports): `pkg/generator/connect_e2e_test.go`
-- Fuzz tests: `pkg/runtime/fix_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`
+- Fuzz tests: `pkg/runtime/decode_fuzz_test.go`, `pkg/gen/schema_fuzz_test.go`
 
 ## Proto Generation
 
-Uses `buf`. Test protos in `pkg/testdata/proto/`.
+Uses `buf`. Test protos in `pkg/testdata/proto/`; methods must carry `(mcp.v1.tool_description)` to
+be served by connectmcp. `pkg/testdata/proto/mcp/v1/annotations.proto` is a vendored copy of
+`proto/mcp/v1/annotations.proto`; keep them in sync.
 After changing protos: `just generate`.
 
 ## Development workflow
 
-1. Edit proto or generator code
-2. `just generate` (regenerates test proto Go code + descriptor set)
-3. `just test-unit` (runs unit tests, including golden comparison)
+1. Edit protos or code
+2. `just generate` (only after proto changes)
+3. `just test-unit`
 
 ## Releasing
 
 Releases are cut by pushing a `vX.Y.Z` tag on main; `.github/workflows/release.yml` then:
 
-- builds the plugin binaries and creates the GitHub release;
+- creates the GitHub release;
 - pushes `proto/` to `buf.build/advdv/protoc-gen-go-mcp` labeled with the tag, the commit SHA, and `main`.
 
 The BSR `main` label is the module's default label and is moved **only** by releases

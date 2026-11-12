@@ -32,4 +32,18 @@ extend google.protobuf.MethodOptions {
   // within the same service (one service is one MCP server
   // registration; different services may reuse a name).
   string tool_name = 58800;
+
+  // tool_description exposes this method as an MCP tool when it is served
+  // with the connectmcp package, and is the description the model sees:
+  //
+  //   rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+  //     option (mcp.v1.tool_description) = "Look up one item by its ID.";
+  //   }
+  //
+  // connectmcp works at runtime from the descriptors compiled into the
+  // binary, which carry options but not comments; this is why the
+  // description is an option. Methods without it are not exposed by
+  // connectmcp. The value must not be empty, and only unary methods can be
+  // tools.
+  string tool_description = 58801;
 }

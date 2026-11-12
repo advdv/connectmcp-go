@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main serves a service implementation as MCP tools over stdio.
+// Package main serves a connect-go v2 service as MCP tools over stdio.
 package main
 
 import (
@@ -20,19 +20,28 @@ import (
 	"fmt"
 	"os"
 
+	"connectrpc.com/connect/v2"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
-	// raw is the *mcp.Server for transport setup, s is the runtime.MCPServer
-	// the generated code registers tools on.
-	raw, s := gosdk.NewServer("Example auto-generated MCP server", "1.0.0")
+	// The connect server the tool calls are dispatched to.
+	server := connect.NewServer()
+	testdataconnect.RegisterTestServiceHandler(server, &testServer{})
 
-	// Register the generated MCP handlers.
-	testdatamcp.RegisterTestServiceHandler(s, &testServer{})
+	// raw is the *mcp.Server for transport setup, s is the runtime.MCPServer
+	// tools are registered on.
+	raw, s := gosdk.NewServer("Example MCP server", "1.0.0")
+
+	// Expose every method that carries the (mcp.v1.tool_description) option.
+	if err := connectmcp.Register(s, server); err != nil {
+		fmt.Fprintf(os.Stderr, "Register tools: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := raw.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
 		fmt.Fprintf(os.Stderr, "Server error: %v\n", err)

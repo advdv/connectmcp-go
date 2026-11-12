@@ -17,10 +17,11 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 )
 
-// MCPServer is the minimal MCP server surface that generated code and the
-// dynamic registration path (gen.RegisterService) program against. The gosdk
+// MCPServer is the minimal MCP server surface that tool registration
+// (connectmcp.Register) programs against. The gosdk
 // package adapts the official modelcontextprotocol/go-sdk server to it; other
 // MCP libraries can be supported by implementing this one method.
 type MCPServer interface {
@@ -41,6 +42,9 @@ type ToolHandler func(ctx context.Context, request *CallToolRequest) (*CallToolR
 // CallToolRequest carries the decoded arguments from an MCP tool call.
 type CallToolRequest struct {
 	Arguments map[string]any
+	// Header holds the headers of the HTTP request that carried the tool
+	// call, or nil when the MCP transport is not HTTP (e.g. stdio).
+	Header http.Header
 }
 
 // CallToolResult is the response from a tool handler.

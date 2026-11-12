@@ -66,9 +66,11 @@ func (w *server) AddTool(tool runtime.Tool, handler runtime.ToolHandler) {
 				args = nil
 			}
 		}
-		result, err := handler(ctx, &runtime.CallToolRequest{
-			Arguments: args,
-		})
+		toolRequest := &runtime.CallToolRequest{Arguments: args}
+		if request.Extra != nil {
+			toolRequest.Header = request.Extra.Header
+		}
+		result, err := handler(ctx, toolRequest)
 		if err != nil {
 			return nil, err
 		}

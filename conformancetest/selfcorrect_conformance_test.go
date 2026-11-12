@@ -23,7 +23,7 @@ import (
 
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
 	"github.com/redpanda-data/ai-sdk-go/llm"
 )
 
@@ -43,7 +43,7 @@ const (
 	geminiSkipThoughtValidation = "skip_thought_signature_validator"
 )
 
-// recordingMCPServer captures the handlers the generated code registers, so the
+// recordingMCPServer captures the handlers connectmcp registers, so the
 // test can drive the real production handler.
 type recordingMCPServer struct {
 	handlers map[string]runtime.ToolHandler
@@ -56,10 +56,10 @@ func (s *recordingMCPServer) AddTool(tool runtime.Tool, h runtime.ToolHandler) {
 	s.handlers[tool.Name] = h
 }
 
-// wktService implements the generated TestServiceServer and records the request
-// the handler passes through.
+// wktService is a connect handler for TestService that records the request
+// the tool call passes through.
 type wktService struct {
-	testdatamcp.TestServiceServer
+	testdataconnect.UnimplementedTestServiceHandler
 	got *testdata.ProcessWellKnownTypesRequest
 }
 
@@ -94,8 +94,8 @@ func TestConformance_SelfCorrectsFromToolError(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
 		mcp := &recordingMCPServer{}
 		svc := &wktService{}
-		testdatamcp.RegisterTestServiceHandler(mcp, svc)
-		tool := testdatamcp.TestService_ProcessWellKnownTypesTool
+		registerTestService(t, mcp, svc)
+		tool := testTool("TestService", "ProcessWellKnownTypes")
 		handler := mcp.handlers[tool.Name]
 
 		// 1. The scripted bad call, and the error our handler returns for it.

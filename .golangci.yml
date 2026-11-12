@@ -15,8 +15,6 @@ linters:
       - std-error-handling
     paths:
       - examples/*/gen
-      - pkg/generator/testdata/actual
-      - pkg/generator/testdata/golden
       - third_party$
       - builtin$
       - examples$
@@ -28,8 +26,6 @@ formatters:
     generated: lax
     paths:
       - examples/*/gen
-      - pkg/generator/testdata/actual
-      - pkg/generator/testdata/golden
       - third_party$
       - builtin$
       - examples$

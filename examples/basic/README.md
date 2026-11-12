@@ -1,14 +1,14 @@
 # Basic Example
 
-Serves the `TestService` from `pkg/testdata` as MCP tools over stdio, using the
-generated handlers in `pkg/testdata/gen/go/testdata/testdatamcp` (created by
-`just generate`) and the official MCP go-sdk.
+Serves the `TestService` from `pkg/testdata` as MCP tools over stdio, using
+`connectmcp.Register` and the official MCP go-sdk. The methods are tools because
+they carry the `(mcp.v1.tool_description)` option in `test_service.proto`.
 
 ```bash
 go run .
 ```
 
-See `../connect` for exposing a connect-go v2 server or client as MCP tools.
+See `../connect` for serving MCP over HTTP next to the connect API itself.
 
 ## Test / list tools
 

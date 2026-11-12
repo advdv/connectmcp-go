@@ -32,7 +32,6 @@ import (
 
 	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
-	testdatamcp "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
 	"github.com/redpanda-data/ai-sdk-go/llm"
 	"github.com/redpanda-data/ai-sdk-go/providers/anthropic"
 	"github.com/redpanda-data/ai-sdk-go/providers/google"
@@ -166,7 +165,7 @@ func decodeInto(t *testing.T, args json.RawMessage, msg proto.Message) {
 // TestConformance_Basic is a sanity check on a tool with no oneof.
 func TestConformance_Basic(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
-		args := callTool(t, m, testdatamcp.TestService_GetItemTool, "Get the item with ID 'item-123'.")
+		args := callTool(t, m, testTool("TestService", "GetItem"), "Get the item with ID 'item-123'.")
 		var req testdata.GetItemRequest
 		decodeInto(t, args, &req)
 		if req.GetId() != "item-123" {
@@ -180,7 +179,7 @@ func TestConformance_Basic(t *testing.T) {
 // discriminated-object rendering must be accepted and correctly filled.
 func TestConformance_Oneof(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
-		args := callTool(t, m, testdatamcp.EdgeCaseService_MultipleOneofsTool,
+		args := callTool(t, m, testTool("EdgeCaseService", "MultipleOneofs"),
 			"Create a job named 'export'. Its source should be the URL https://example.com/data, and the output format should be JSON.")
 		var req testdata.MultipleOneofsRequest
 		decodeInto(t, args, &req)
@@ -196,7 +195,7 @@ func TestConformance_Oneof(t *testing.T) {
 // TestConformance_MessageOneof exercises a oneof whose member is a message.
 func TestConformance_MessageOneof(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
-		args := callTool(t, m, testdatamcp.TestService_CreateItemTool,
+		args := callTool(t, m, testTool("TestService", "CreateItem"),
 			"Create an item named 'Widget'. It is a product priced at 9.99 with quantity 5.")
 		var req testdata.CreateItemRequest
 		decodeInto(t, args, &req)
@@ -213,7 +212,7 @@ func TestConformance_MessageOneof(t *testing.T) {
 // oneof (the discriminated wrapper plus recursion-depth placeholders).
 func TestConformance_RecursiveOneof(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
-		args := callTool(t, m, testdatamcp.EdgeCaseService_OneofRecursiveTool,
+		args := callTool(t, m, testTool("EdgeCaseService", "OneofRecursive"),
 			"Build a tree node whose value is 'root' with a single child whose value is 'child'.")
 		var req testdata.OneofRecursiveRequest
 		decodeInto(t, args, &req)
@@ -231,7 +230,7 @@ func TestConformance_RecursiveOneof(t *testing.T) {
 // where the schema is not downgraded.
 func TestConformance_WellKnownTypes(t *testing.T) {
 	runOnAllProviders(t, func(t *testing.T, m llm.Model) {
-		args := callTool(t, m, testdatamcp.TestService_ProcessWellKnownTypesTool,
+		args := callTool(t, m, testTool("TestService", "ProcessWellKnownTypes"),
 			"Process a record. Set metadata to a JSON object with exactly these keys: "+
 				`environment="production" and replicas=3. Set config to the string "verbose". `+
 				"Set timestamp to 2026-01-02T03:04:05Z.")

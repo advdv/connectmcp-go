@@ -13,8 +13,7 @@
 // limitations under the License.
 
 // Package gen provides JSON schema generation from protobuf message descriptors.
-// It can be used at code generation time (by the protoc plugin) or at runtime
-// (via protoreflect) for dynamic schema generation.
+// It works at runtime with any protoreflect descriptor.
 package gen
 
 import (

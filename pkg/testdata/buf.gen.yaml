@@ -25,7 +25,3 @@ plugins:
     out: ./gen/go
     opt:
     - paths=source_relative
-  - local: ["go","run","../../cmd/protoc-gen-go-mcp"]
-    out: ./gen/go
-    opt:
-      - paths=source_relative

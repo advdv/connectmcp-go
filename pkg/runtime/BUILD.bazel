@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "arguments.go",
         "error.go",
-        "extra_properties.go",
         "server.go",
         "transform.go",
     ],
@@ -28,9 +27,6 @@ go_test(
         "arguments_test.go",
         "decode_fuzz_test.go",
         "error_test.go",
-        "extra_properties_edge_cases_test.go",
-        "extra_properties_test.go",
-        "tool_filter_test.go",
         "transform_test.go",
         "transform_wkt_test.go",
     ],

@@ -19,7 +19,7 @@
 // asserts both the generated schema shape and an encode/decode round-trip on
 // dynamicpb messages. Building descriptors dynamically avoids regenerating the
 // checked-in testdata and proves the gen + runtime code paths work on any
-// descriptor, including the dynamic registration path.
+// descriptor.
 package gen_test
 
 import (

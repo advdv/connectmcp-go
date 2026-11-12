@@ -50,12 +50,27 @@ func ConfiguredToolName(method protoreflect.MethodDescriptor) (string, bool) {
 	return name, true
 }
 
+// ConfiguredToolDescription returns the (mcp.v1.tool_description) option on
+// the method and whether it is set at all. The connectmcp package exposes
+// exactly the methods that carry it.
+func ConfiguredToolDescription(method protoreflect.MethodDescriptor) (string, bool) {
+	opts, ok := method.Options().(*descriptorpb.MethodOptions)
+	if !ok || opts == nil {
+		return "", false
+	}
+	if !proto.HasExtension(opts, mcpv1.E_ToolDescription) {
+		return "", false
+	}
+	description, _ := proto.GetExtension(opts, mcpv1.E_ToolDescription).(string)
+	return description, true
+}
+
 // ToolNameForMethod resolves the MCP tool name for a method: the
 // (mcp.v1.tool_name) option when set and valid, otherwise the derived
 // full-name-based form, hash-truncated to 64 chars. Invalid configured
-// names fall back to the derived form here so dynamic registration
-// never publishes a provider-rejected name; the generator additionally
-// fails code generation on them so they are caught when authored.
+// names fall back to the derived form here so a provider-rejected name is
+// never published; connectmcp additionally rejects them at registration so
+// they are caught at startup.
 func ToolNameForMethod(method protoreflect.MethodDescriptor) string {
 	if name, ok := ConfiguredToolName(method); ok && ValidateToolName(name) == nil {
 		return name

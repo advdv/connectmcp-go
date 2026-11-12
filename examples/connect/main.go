@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main demonstrates exposing a connect-go v2 service as MCP tools.
+// Package main serves a connect-go v2 server over HTTP twice: as a regular
+// connect API, and as MCP tools under /mcp.
 //
-// In connect-go v2 a generated client and a service implementation share the
-// same method signatures, so either can be handed to the generated
-// Register<Service>Handler function:
+// Both entry points dispatch to the same *connect.Server, so its interceptors
+// (auth, validation, tracing) run for RPCs and tool calls alike.
 //
-//   - by default the tools call a connect server in this process through the
-//     in-process transport, so its interceptors (auth, validation, tracing)
-//     run for every tool call;
-//   - with UPSTREAM_URL set, tool calls are forwarded to a remote connect
-//     server instead.
+// With UPSTREAM_URL set, the service is not implemented here: a generated
+// connect client is registered as the handler instead, which forwards every
+// call to that remote connect server.
 package main
 
 import (
@@ -33,40 +31,44 @@ import (
 
 	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
-	"connectrpc.com/connect/v2/connectinprocess"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/runtime/gosdk"
+	"github.com/advdv/protoc-gen-go-mcp/pkg/connectmcp"
 	testdata "github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata"
 	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdataconnect"
-	"github.com/advdv/protoc-gen-go-mcp/pkg/testdata/gen/go/testdata/testdatamcp"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil)) // stdout carries MCP
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	var transport connect.Transport
+	var service testdataconnect.TestServiceHandler = &testService{}
 	if upstream := os.Getenv("UPSTREAM_URL"); upstream != "" {
-		// Forward tool calls to a remote connect server.
-		transport = connecthttp.NewTransport(http.DefaultClient, upstream)
-	} else {
-		// Serve tool calls from a connect server in this process. The same
-		// server could also be mounted on an http.ServeMux with connecthttp.
-		server := connect.NewServer(logRPCs(logger))
-		testdataconnect.RegisterTestServiceHandler(server, &testService{})
-		transport = connectinprocess.New(server)
+		// A generated client has the handler's method signatures.
+		service = testdataconnect.NewTestServiceClient(connect.NewClient(
+			connecthttp.NewTransport(http.DefaultClient, upstream)))
 	}
-	client := testdataconnect.NewTestServiceClient(connect.NewClient(transport))
 
-	raw, s := gosdk.NewServer("Example connect-go v2 MCP server", "1.0.0")
-	testdatamcp.RegisterTestServiceHandler(s, client)
+	server := connect.NewServer(logRPCs(logger))
+	testdataconnect.RegisterTestServiceHandler(server, service)
 
-	if err := raw.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	// Every method carrying the (mcp.v1.tool_description) option is a tool.
+	mcpHandler, err := connectmcp.NewHandler(server,
+		connectmcp.WithServerInfo("Example connect-go v2 MCP server", "1.0.0"))
+	if err != nil {
+		logger.Error("create MCP handler", "error", err)
+		os.Exit(1)
+	}
+
+	mux := http.NewServeMux()
+	connecthttp.Mount(mux, server)
+	mux.Handle("/mcp", mcpHandler)
+
+	addr := "localhost:8080"
+	logger.Info("listening", "addr", addr, "mcp", "http://"+addr+"/mcp")
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		logger.Error("server error", "error", err)
 		os.Exit(1)
 	}
 }
 
-// logRPCs is a connect server interceptor; it sees every MCP tool call.
 func logRPCs(logger *slog.Logger) connect.ServerInterceptor {
 	return func(next connect.ServerFunc) connect.ServerFunc {
 		return func(ctx context.Context, spec connect.Spec, stream connect.ServerStream) error {
