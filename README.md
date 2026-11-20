@@ -299,6 +299,23 @@ connectmcp.NewHandler(server,
 
 Annotations are hints for clients, not a security boundary: authorize tool calls in an interceptor.
 
+To make a tool of a method whose proto you do not own, such as Google's `google.longrunning.Operations`, give it the three options in code with `connectmcp.WithTool`. They are checked like the proto options, and when the method declares no `idempotency_level`, the idempotency level of its `connect.Spec` stands in for it:
+
+```go
+connectmcp.NewHandler(server,
+    connectmcp.WithTool("/google.longrunning.Operations/GetOperation", connectmcp.ToolOptions{
+        Name:        "get_operation",
+        Description: "Get a long-running operation by its name.",
+        Annotations: &connectmcpv1.ToolAnnotations{Title: "Get operation", OpenWorldHint: proto.Bool(false)},
+    }),
+    // A field's description, and whether it is required, by its full name.
+    connectmcp.WithField("google.longrunning.GetOperationRequest.name", connectmcp.FieldOptions{
+        Description: "The operation's resource name.",
+        Required:    true,
+    }),
+)
+```
+
 ### Tool naming
 
 By default a tool is named after the method's full proto name with dots replaced by underscores (`redpanda_mcps_sql_v1_SQLService_Query`). Names longer than 64 characters — the strictest provider limit — are truncated: a 10-character hash of the full name plus as much of the tail (the most specific part) as fits. The hash is forced to start with a letter because Gemini rejects function names that start with a digit.

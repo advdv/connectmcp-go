@@ -6,7 +6,8 @@
 // the registered services and needs no generated code of its own.
 //
 // A method becomes a tool when it carries the (connectmcp.v1.tool_description)
-// option; methods without it are not exposed:
+// option, or when WithTool names it for a proto you do not own; other methods
+// are not exposed:
 //
 //	rpc GetItem(GetItemRequest) returns (GetItemResponse) {
 //	  option (connectmcp.v1.tool_description) = "Look up one item by its ID.";
@@ -37,6 +38,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect/v2"
+	"github.com/advdv/connectmcp-go/pkg/connectmcpv1"
 	"github.com/advdv/connectmcp-go/pkg/mcpserver"
 	"github.com/advdv/connectmcp-go/pkg/mcpserver/gosdk"
 	"github.com/advdv/connectmcp-go/pkg/toolcodec"
@@ -44,6 +46,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // Protocol is the CallInfo.Protocol value of RPCs that arrive as MCP tool calls.
@@ -68,6 +71,126 @@ type config struct {
 	toolFilter     func(toolName string) bool
 	annotate       func(toolName string, method protoreflect.MethodDescriptor, annotations *mcpserver.ToolAnnotations)
 	readMaxBytes   int
+	tools          map[string]ToolOptions // procedure -> options
+	fields         map[protoreflect.FullName]FieldOptions
+}
+
+// ToolOptions are the Go form of the (connectmcp.v1.tool_name),
+// (connectmcp.v1.tool_description) and (connectmcp.v1.tool_annotations) method
+// options, for WithTool.
+type ToolOptions struct {
+	// Name is the tool name; empty derives it from the method's full name.
+	Name string
+	// Description is what the model reads about the tool; it must not be empty.
+	Description string
+	// Annotations are the title and hints; nil sets none.
+	Annotations *connectmcpv1.ToolAnnotations
+}
+
+// WithTool exposes the method of procedure as a tool, as if it carried the
+// (connectmcp.v1.*) options in tool, for methods whose protos you do not own,
+// such as google.longrunning.Operations. What tool sets takes precedence over
+// the method's own options, and is checked like them. When the method does not
+// declare an idempotency_level, the IdempotencyLevel of its connect.Spec
+// stands in for it. Register fails if no method of procedure is registered.
+func WithTool(procedure string, tool ToolOptions) Option {
+	return func(c *config) {
+		if c.tools == nil {
+			c.tools = map[string]ToolOptions{}
+		}
+		c.tools[procedure] = tool
+	}
+}
+
+// FieldOptions are the Go form of a field's (connectmcp.v1.field_description)
+// option and REQUIRED field behavior, for WithField.
+type FieldOptions = toolschema.FieldOptions
+
+// WithField gives the field with the full name field, such as
+// "google.longrunning.GetOperationRequest.name", the description and REQUIRED
+// field behavior in options, for fields whose protos you do not own. Like the
+// field_description option, the description shows wherever a tool's schema
+// has the field. Register fails if no tool's request or response has the
+// field, or if options sets a description on a field that has the
+// (connectmcp.v1.field_description) option already.
+func WithField(field string, options FieldOptions) Option {
+	return func(c *config) {
+		if c.fields == nil {
+			c.fields = map[protoreflect.FullName]FieldOptions{}
+		}
+		c.fields[protoreflect.FullName(field)] = options
+	}
+}
+
+// checkFields returns an error for a field of WithField that no tool's
+// request or response has, or whose description the field's own option sets
+// already.
+func checkFields(fields map[protoreflect.FullName]FieldOptions, methods []protoreflect.MethodDescriptor) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	reachable := map[protoreflect.FullName]protoreflect.FieldDescriptor{}
+	seen := map[protoreflect.FullName]bool{}
+	var visit func(md protoreflect.MessageDescriptor)
+	visit = func(md protoreflect.MessageDescriptor) {
+		if seen[md.FullName()] {
+			return
+		}
+		seen[md.FullName()] = true
+		for i := range md.Fields().Len() {
+			fd := md.Fields().Get(i)
+			reachable[fd.FullName()] = fd
+			if fd.IsMap() {
+				fd = fd.MapValue()
+			}
+			if fd.Message() != nil {
+				visit(fd.Message())
+			}
+		}
+	}
+	for _, method := range methods {
+		visit(method.Input())
+		visit(method.Output())
+	}
+	for name, options := range fields {
+		fd, ok := reachable[name]
+		if !ok {
+			return fmt.Errorf("connectmcp: WithField: no tool's request or response has the field %s", name)
+		}
+		if _, own := toolschema.ConfiguredFieldDescription(fd); own && options.Description != "" {
+			return fmt.Errorf("connectmcp: WithField: %s has the (connectmcp.v1.field_description) option already", name)
+		}
+	}
+	return nil
+}
+
+// methodWithOptions is a method descriptor with other options, through which
+// the tool of a WithTool method is derived like that of an annotated one.
+type methodWithOptions struct {
+	protoreflect.MethodDescriptor
+	options *descriptorpb.MethodOptions
+}
+
+func (m methodWithOptions) Options() protoreflect.ProtoMessage { return m.options }
+
+// withTool returns method with the options of tool set over its own, and the
+// idempotency level of spec when it declares none.
+func withTool(method protoreflect.MethodDescriptor, spec connect.Spec, tool ToolOptions) protoreflect.MethodDescriptor {
+	options := &descriptorpb.MethodOptions{}
+	if own, ok := method.Options().(*descriptorpb.MethodOptions); ok && own != nil {
+		options, _ = proto.Clone(own).(*descriptorpb.MethodOptions)
+	}
+	if options.IdempotencyLevel == nil {
+		options.IdempotencyLevel = descriptorpb.MethodOptions_IdempotencyLevel(spec.IdempotencyLevel).Enum()
+	}
+	proto.SetExtension(options, connectmcpv1.E_ToolDescription, tool.Description)
+	if tool.Name != "" {
+		proto.SetExtension(options, connectmcpv1.E_ToolName, tool.Name)
+	}
+	if tool.Annotations != nil {
+		proto.SetExtension(options, connectmcpv1.E_ToolAnnotations, tool.Annotations)
+	}
+	return methodWithOptions{MethodDescriptor: method, options: options}
 }
 
 // WithServerInfo sets the name and version the MCP server created by
@@ -212,23 +335,32 @@ func (c config) streamableHTTPOptions() *mcp.StreamableHTTPOptions {
 //     option (destructive_hint true on a NO_SIDE_EFFECTS method);
 //   - a request or response message has a (buf.validate) rule this binary
 //     cannot decode (see toolschema.CheckValidateRules);
-//   - two tools end up with the same name.
+//   - two tools end up with the same name;
+//   - a WithTool procedure is not registered, or a WithField field is in no
+//     tool's request or response, or has the (connectmcp.v1.field_description)
+//     option already while WithField sets a description.
 func Register(s mcpserver.MCPServer, server *connect.Server, opts ...Option) error {
 	config := newConfig(opts)
 
 	type tool struct {
-		spec connect.Spec
-		def  mcpserver.Tool
+		spec   connect.Spec
+		method protoreflect.MethodDescriptor
+		def    mcpserver.Tool
 	}
 	var (
-		tools     []tool
-		annotated bool
-		names     = map[string]string{} // tool name -> procedure
+		tools      []tool
+		annotated  bool
+		names      = map[string]string{} // tool name -> procedure
+		configured = map[string]bool{}   // procedures of WithTool found on server
 	)
 	for spec := range server.Specs() {
 		method, ok := spec.Schema.(protoreflect.MethodDescriptor)
 		if !ok {
 			continue
+		}
+		if tool, ok := config.tools[spec.Procedure]; ok {
+			method = withTool(method, spec, tool)
+			configured[spec.Procedure] = true
 		}
 		description, ok := toolschema.ConfiguredToolDescription(method)
 		if !ok {
@@ -259,7 +391,7 @@ func Register(s mcpserver.MCPServer, server *connect.Server, opts ...Option) err
 			}
 		}
 
-		def := toolschema.ToolForMethod(method, description)
+		def := toolschema.ToolForMethodWithOptions(method, description, toolschema.SchemaOptions{Fields: config.fields})
 		if config.toolFilter != nil && !config.toolFilter(def.Name) {
 			continue
 		}
@@ -278,7 +410,19 @@ func Register(s mcpserver.MCPServer, server *connect.Server, opts ...Option) err
 			return fmt.Errorf("connectmcp: duplicate tool name %q: claimed by both %s and %s", def.Name, prev, spec.Procedure)
 		}
 		names[def.Name] = spec.Procedure
-		tools = append(tools, tool{spec: spec, def: def})
+		tools = append(tools, tool{spec: spec, method: method, def: def})
+	}
+	for procedure := range config.tools {
+		if !configured[procedure] {
+			return fmt.Errorf("connectmcp: WithTool: no method of %s, with a protobuf method descriptor, is registered on the connect server", procedure)
+		}
+	}
+	methods := make([]protoreflect.MethodDescriptor, 0, len(tools))
+	for _, tool := range tools {
+		methods = append(methods, tool.method)
+	}
+	if err := checkFields(config.fields, methods); err != nil {
+		return err
 	}
 	if !annotated {
 		return fmt.Errorf("connectmcp: no method registered on the connect server carries the (connectmcp.v1.tool_description) option")

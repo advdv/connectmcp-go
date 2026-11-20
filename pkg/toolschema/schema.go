@@ -39,6 +39,21 @@ type SchemaOptions struct {
 	// (though it's not strictly enforced), so the default keeps total depth
 	// manageable while still giving LLMs useful field-level detail.
 	MaxRecursionDepth int
+
+	// Fields gives fields, by full name, what their own options would: for
+	// fields of protos you do not own. A Description is used only for a field
+	// without the (connectmcp.v1.field_description) option.
+	Fields map[protoreflect.FullName]FieldOptions
+}
+
+// FieldOptions are the Go form of a field's (connectmcp.v1.field_description)
+// option and REQUIRED field behavior.
+type FieldOptions struct {
+	// Description is what the model reads about the field.
+	Description string
+	// Required lists the field in its message's "required", as the REQUIRED
+	// field behavior does; it cannot make a required field optional.
+	Required bool
 }
 
 // DiscriminatorKey is the property name of the oneof discriminator emitted in
@@ -119,7 +134,7 @@ func messageSchema(md protoreflect.MessageDescriptor, opts SchemaOptions, seen m
 		}
 
 		normalFields[name] = fieldSchema(nestedFd, opts, seen)
-		if IsFieldRequired(nestedFd) {
+		if IsFieldRequired(nestedFd) || opts.Fields[nestedFd.FullName()].Required {
 			required = append(required, name)
 		}
 	}
@@ -254,7 +269,12 @@ func fieldSchema(fd protoreflect.FieldDescriptor, opts SchemaOptions, seen map[p
 	// What the author says about the field comes first, then what the
 	// schema says by itself (a placeholder, a well-known type), then the
 	// rules.
-	if description, ok := ConfiguredFieldDescription(fd); ok {
+	description, ok := ConfiguredFieldDescription(fd)
+	if !ok {
+		description = opts.Fields[fd.FullName()].Description
+		ok = description != ""
+	}
+	if ok {
 		if generated, _ := schema["description"].(string); generated != "" {
 			description += "\n" + generated
 		}
@@ -445,6 +465,12 @@ func MangleHeadIfTooLong(name string, maxLen int) string {
 // descriptor (input and output JSON schemas plus name, description and
 // annotations, see ToolAnnotationsForMethod).
 func ToolForMethod(method protoreflect.MethodDescriptor, description string) mcpserver.Tool {
+	return ToolForMethodWithOptions(method, description, SchemaOptions{})
+}
+
+// ToolForMethodWithOptions is ToolForMethod with the schemas generated with
+// opts.
+func ToolForMethodWithOptions(method protoreflect.MethodDescriptor, description string, opts SchemaOptions) mcpserver.Tool {
 	toolName := ToolNameForMethod(method)
 	description = CleanComment(description)
 	// On a contradiction the hints derived from idempotency_level are used;
@@ -454,8 +480,8 @@ func ToolForMethod(method protoreflect.MethodDescriptor, description string) mcp
 	return mcpserver.Tool{
 		Name:            toolName,
 		Description:     description,
-		RawInputSchema:  marshalTopLevelSchema(method.Input(), SchemaOptions{}),
-		RawOutputSchema: marshalTopLevelSchema(method.Output(), SchemaOptions{}),
+		RawInputSchema:  marshalTopLevelSchema(method.Input(), opts),
+		RawOutputSchema: marshalTopLevelSchema(method.Output(), opts),
 		Annotations:     annotations,
 	}
 }

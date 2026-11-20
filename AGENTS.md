@@ -44,7 +44,11 @@ conformancetest/            E2E tests against real LLM providers (Gemini, OpenAI
 
 `connectmcp.NewHandler(server)` exposes every method registered on a `*connect.Server` that carries
 `(connectmcp.v1.tool_description)` as a tool, dispatching through `connect.Server.Call`. Modeled on
-vanguard-go's `Mount`. This is the only way to create tools.
+vanguard-go's `Mount`. `connectmcp.WithTool(procedure, ToolOptions{...})` gives a method whose proto you do not own
+(e.g. `google.longrunning.Operations`) the same three options in Go, checked like them; the method's
+`connect.Spec` idempotency level stands in for an undeclared `idempotency_level`.
+`connectmcp.WithField(fullName, FieldOptions{Description, Required})` does the same for a field's
+`field_description` and REQUIRED field behavior (`toolschema.SchemaOptions.Fields`).
 
 ## Key APIs
 

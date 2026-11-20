@@ -159,6 +159,7 @@ go_library(
     importpath = "github.com/advdv/connectmcp-go",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/connectmcpv1",
         "//pkg/mcpserver",
         "//pkg/mcpserver/gosdk",
         "//pkg/toolcodec",
@@ -167,6 +168,7 @@ go_library(
         "@com_github_modelcontextprotocol_go_sdk//mcp",
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/descriptorpb",
     ],
 )
 
@@ -184,6 +186,7 @@ go_test(
         "testsupport_test.go",
         "tool_filter_e2e_test.go",
         "transport_test.go",
+        "with_tool_test.go",
     ],
     embed = [":connectmcp-go"],
     deps = [

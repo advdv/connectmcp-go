@@ -32,6 +32,8 @@ import (
 type Transport struct {
 	transport *mcp.StreamableClientTransport
 
+	tools map[string]ToolOptions // procedure -> options, from WithTool
+
 	mu      sync.Mutex
 	session *mcp.ClientSession
 	closed  bool
@@ -43,7 +45,8 @@ type Transport struct {
 // The MCP session is opened by the first RPC and ended by Close. Each RPC is
 // one tools/call request:
 //
-//   - The tool is the one NewHandler names for the method (toolschema.ToolNameForMethod).
+//   - The tool is the one NewHandler names for the method (toolschema.ToolNameForMethod),
+//     given the same WithTool options; NewTransport ignores the other options.
 //   - The request message is sent as the tool arguments in the shape of the
 //     tool's input schema (toolcodec.EncodeMessage), without validating it.
 //   - The request headers set on the call (connect.NewClientContext) are added
@@ -55,13 +58,13 @@ type Transport struct {
 //
 // MCP carries no response headers or trailers, so those of the call stay
 // empty. Only unary RPCs can be called; others fail with CodeUnimplemented.
-func NewTransport(httpClient *http.Client, url string) *Transport {
+func NewTransport(httpClient *http.Client, url string, opts ...Option) *Transport {
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
 	client := *httpClient
 	client.Transport = callHeaders{base: httpClient.Transport}
-	return &Transport{transport: &mcp.StreamableClientTransport{
+	return &Transport{tools: newConfig(opts).tools, transport: &mcp.StreamableClientTransport{
 		Endpoint:   url,
 		HTTPClient: &client,
 		// Only responses to tool calls are needed, not server-initiated messages.
@@ -91,6 +94,9 @@ func (t *Transport) NewClientStream(ctx context.Context, spec connect.Spec) (con
 	if spec.StreamType != connect.StreamTypeUnary {
 		return nil, connect.Errorf(connect.CodeUnimplemented, "connectmcp: %s is a %s method, only unary methods can be tools",
 			spec.Procedure, spec.StreamType)
+	}
+	if tool, ok := t.tools[spec.Procedure]; ok {
+		method = withTool(method, spec, tool)
 	}
 	return &clientStream{ctx: ctx, transport: t, tool: toolschema.ToolNameForMethod(method)}, nil
 }
